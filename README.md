@@ -72,15 +72,6 @@ uv pip install -r requirements.txt
 # API Setup and Verification (OpenAI and Anthropic)
 uv run main.py
 
-# LangChain Core Concepts - LCEL and Runnable Chains
-uv run core_concepts.py
-
-# Working with LLMs in LangChain - Multi Providers Configuration
-uv run working_with_llms.py
-
-# Prompt Templates and Messages - Deep Dive
-uv run prompt_templates.py
-
 ```
 
 ## LangCChain V.1 Architecture
@@ -152,7 +143,13 @@ cd langchain-course/
 
 pyenv global 3.12.10
 pyenv local 3.12.10
+
+# LangChain Core Concepts - LCEL and Runnable Chains
 uv run core_concepts.py
+
+# Working with LLMs in LangChain - Multi Providers Configuration
+uv run working_with_llms.py
+
 ```
 
 ## LCEL - The Pipe Operator
@@ -225,3 +222,223 @@ chain = prompt | model | parser
 > 💰 **Pro Tip: Combine all three strategies**
 >
 > **Cheap model + limited tokens + caching = 50-100x cost reduction**
+
+## Prompt Message and Message Types
+
+### 1. Prompt Template 是什麼？
+
+* Prompt 的**模板**，類似表單或餅乾模具（Cookie Cutter）。
+* 先定義固定內容，再用**變數（Variables）**填入不同值。
+* 例如：
+
+```text
+Tell me a {adjective} joke about {topic}.
+```
+
+填入：
+
+* adjective = funny
+* topic = cats
+
+得到：
+
+```text
+Tell me a funny joke about cats.
+```
+
+---
+
+### 2. 為什麼使用 Template？
+
+* **可重複使用（Reusable）**：定義一次，重複使用。
+* **封裝（Encapsulation）**：Prompt 結構集中管理。
+* **容易維護（Maintainability）**：修改模板即可影響所有使用處。
+
+---
+
+### 3. Multi-Message Template
+
+除了單一 Prompt，還可以建立多種 Message：
+
+```text
+System:
+You are a {role}.
+Always be {tone}.
+
+Human:
+{question}
+```
+
+例如：
+
+* role = tutor
+* tone = encouraging
+* question = Explain recursion.
+
+會產生：
+
+* **System Message**：You are a helpful tutor. Always be encouraging.
+* **Human Message**：Explain recursion.
+
+好處是能同時設定 AI 的角色與使用者問題。
+
+---
+
+### 4. LangChain 的 Message Types
+
+* **System Message**：設定 AI 的角色、行為（Persona）。
+* **Human Message**：使用者輸入的問題或任務。
+* **AI Message**：AI 回覆內容。
+* **Tool Message**：工具/API/資料庫回傳的結果。
+
+常見流程：
+
+```text
+┌────────┐   ┌────────┐   ┌──────┐   ┌────────┐   ┌──────┐   ┌────────┐   ┌──────┐
+│ System │ → │ Human  │ → │  AI  │ → │ Human  │ → │  AI  │ → │  Tool  │ → │  AI  │
+└────────┘   └────────┘   └──────┘   └────────┘   └──────┘   └────────┘   └──────┘
+```
+
+---
+
+#### 5. Few-shot Prompting（少樣本提示）
+
+透過**提供幾個範例**讓 AI 學習規律，而不是寫死規則。
+
+例如：
+
+```text
+Happy → Sad
+Tall → Short
+Hot → Cold
+```
+
+之後輸入：
+
+```text
+Fast
+```
+
+AI 就能**推論**：
+
+```text
+Slow
+```
+
+通常提供 **2～5 個範例**就足夠。
+
+---
+
+#### 6. Prompt Composition（Prompt 組合）
+
+將多個可重用的 Prompt 元件組合成完整 Prompt。
+
+例如：
+
+```text
+System Prompt
+You are a {role}.
+
+User Prompt
+{question}
+```
+
+組合後：
+
+```text
+You are a tutor.
+
+Explain recursion.
+```
+
+---
+
+### 核心觀念（一句話）
+
+> **LangChain 利用 Prompt Template、Message、Few-shot Prompting 與 Prompt Composition，讓 Prompt 具備「可重用、模組化、易維護」的特性，更容易建立大型 AI 應用與 AI Agent。**
+
+---
+
+### Hands-on Exercises
+
+```bash
+source .venv/Scripts/activate
+
+cd langchain-course/
+pyenv global 3.12.10
+pyenv local 3.12.10
+
+# Prompt Templates and Messages - Deep Dive
+uv run prompt_messages.py
+
+```
+
+## Why Output Parsers?
+
+### ❌ The Problem *String*
+
+> "The person is named Alex and they are 25 years old and work as a developer..."
+
+---
+
+### ✅ The Solution **→ Parser →** *Structured*
+
+| Field  | Value         |
+|--------|---------------|
+| name:  | "Alex"        |
+| age:   | 25            |
+| job:   | "developer"   |
+
+---
+
+### Key Benefits
+
+- **Parse JSON, lists, objects**
+- **Handle errors gracefully**
+- **Enable downstream processing**
+- **Type-safe with Pydantic**
+
+### LLM Parsers LangChain Output Parsers（2026 版）
+
+> 📌 **官方定位（LangChain v1，2026）**
+> 現今多數 LLM（OpenAI、Anthropic Claude、xAI Grok 等）已**原生支援結構化輸出**。能用模型原生能力時，官方建議優先用 **`model.with_structured_output()`**，而非手動接 output parser。
+> `*OutputParser` 主要保留給：**不支援原生結構化輸出的模型**，或需要**額外處理 / 驗證**的場景。
+
+#### 首選：with_structured_output()（含型別驗證）
+
+```python
+from pydantic import BaseModel
+
+class Person(BaseModel):
+    name: str
+    age: int
+
+structured_model = model.with_structured_output(Person)
+result = structured_model.invoke("...")   # 回傳 Person 實例，age 已驗證為 int
+```
+
+- 自動選策略：原生支援的模型走 **ProviderStrategy**，其他走 **ToolStrategy（tool calling）**。
+- 型別由 Pydantic 把關，但**型別安全 ≠ 語意正確**（填錯內容、型別卻對時不會報錯）。
+- 在支援原生結構化輸出的模型上，with_structured_output() 比 PydanticOutputParser 可靠。
+
+#### 仍適用 output parser 的場景
+
+| 你要的輸出 | 用哪個 parser | 何時用 |
+|---|---|---|
+| 純字串 | `StrOutputParser` | LCEL chain 收尾取純文字，日常標配 |
+| dict / JSON | `JsonOutputParser` | 模型不支援原生結構化輸出時最可靠的 JSON 方案 |
+| 依自訂 schema 的結構化 dict | `StructuredOutputParser` | 輕量結構，**無型別驗證** |
+| Pydantic 模型結構物件（**含型別驗證**） | `PydanticOutputParser` | 需驗證但模型不支援原生結構化輸出時的替代 |
+| 逗號分隔清單 | `CommaSeparatedListOutputParser` | 解析 `a, b, c` → list |
+| 日期 / 列舉 | `DatetimeOutputParser` / `EnumOutputParser` | 轉 datetime / 限定列舉值 |
+
+- `StructuredOutputParser` **沒有型別驗證** — 它不保證 `age` 真的是整數。
+- `PydanticOutputParser` 則用 Pydantic 模型，解析後得到一個**驗證過型別的物件**；`age` 若無法轉成整數會報錯（Pydantic 會先嘗試轉換，例如 `"25"` → `25`，無法轉換才報錯）。需要型別保證時用它。
+
+### 速記
+
+- **能用原生 → `with_structured_output(PydanticModel)`**（首選）。
+- **模型不支援原生 / 要額外驗證 → 才用 parser**。
+- `StrOutputParser` 例外：純取字串，在 `prompt | model | StrOutputParser()` 收尾仍最常用。
+- 要不要型別驗證 → 要就 `PydanticOutputParser`，不要就 `StructuredOutputParser`。
+```
