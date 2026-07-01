@@ -1,3 +1,5 @@
+# LangChain Foundation
+
 ## LangChain 生态系统
 
 ### 核心包（Core Packages）
@@ -464,4 +466,18 @@ uv run output_parsers_final.py
 ```bash
 uv run testLangSmith.py
 uv run smart_bot_section1.py
+```
+
+```note
+from langsmith import traceable
+...
+
+@traceable(name="ask_batch", run_type="chain")
+...
+
+@traceable(name="batch_demo", run_type="chain")
+...
+
+@traceable(name="error_handling_demo", run_type="chain")
+...
 ```
