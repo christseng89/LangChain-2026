@@ -441,4 +441,27 @@ result = structured_model.invoke("...")   # 回傳 Person 實例，age 已驗證
 - **模型不支援原生 / 要額外驗證 → 才用 parser**。
 - `StrOutputParser` 例外：純取字串，在 `prompt | model | StrOutputParser()` 收尾仍最常用。
 - 要不要型別驗證 → 要就 `PydanticOutputParser`，不要就 `StructuredOutputParser`。
+
+```bash
+uv run output_parsers_demo.py
+uv run output_parsers_final.py
+```
+
+## LangSmith Demo
+
+<https://smith.langchain.com/> Select => 'US'
+
+=> + Project "smart_bot"
+
+=> Settings => API Keys => + API Key (smart_bot)
+
+=> Tracing => "smart_bot"
+
+    - error_handling_demo
+    - batch_demo
+    - ask_question
+
+```bash
+uv run testLangSmith.py
+uv run smart_bot_section1.py
 ```
