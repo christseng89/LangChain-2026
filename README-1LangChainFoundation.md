@@ -468,16 +468,16 @@ uv run testLangSmith.py
 uv run smart_bot_section1.py
 ```
 
-```note
+```python
 from langsmith import traceable
+import os
 ...
-
+os.environ["LANGSMITH_TRACING"] = "true"
+...
 @traceable(name="ask_batch", run_type="chain")
 ...
-
 @traceable(name="batch_demo", run_type="chain")
 ...
-
 @traceable(name="error_handling_demo", run_type="chain")
 ...
 ```
