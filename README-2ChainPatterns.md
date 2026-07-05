@@ -75,7 +75,7 @@ Attach callback handlers to intercept and log each step.
 
 Visual trace viewer, cost tracking, evaluation tools.
 
-## 
+## Chain Patterns Hands on
 
 ```bash
 source .venv/Scripts/activate

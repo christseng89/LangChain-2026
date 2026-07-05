@@ -1,0 +1,423 @@
+# Loaders, Splilters, and Vector Stores
+
+## Document Loaders Overview
+
+### Flow
+
+**Raw Files** → **Document Loader** → **List[Document]**
+
+#### Supported Raw File Types
+
+- `.pdf`
+- `.txt`
+- `.html`
+- `.docx`
+- `.csv`
+
+#### Output Structure: `List[Document]`
+
+Each `Document` object contains two fields:
+
+| Field | Description |
+|---|---|
+| `page_content` | The actual text content |
+| `metadata` | source, page, author... |
+
+---
+
+## Core Document Loaders
+
+| Loader | Description | File / Source |
+|---|---|---|
+| `PyPDFLoader` | PDF files | `.pdf` |
+| `TextLoader` | Plain text | `.txt` |
+| `DirectoryLoader` | Multiple files | `folder/*` |
+| `WebBaseLoader` | Web pages | `https://` |
+| `UnstructuredLoader` | Complex docs | mixed |
+
+### Usage Pattern
+
+```python
+loader = Loader(source)  →  docs = loader.load()
+```
+---
+
+## PDF Loading Options
+
+| | `PyPDFLoader` | `PyMuPDFLoader` | `UnstructuredPDFLoader` |
+|---|---|---|---|
+| **Summary** | Fast, basic extraction | Fastest, good metadata | Best for complex layouts |
+| **Speed** | Good | Best | Slower |
+| **Metadata** | Basic | Rich | Detailed |
+| **Best for** | Simple PDFs | High volume | Tables & layouts |
+
+```markdown
+> **Tip:** Start with **`PyPDFLoader`**. Switch only if you need more.
+```
+
+---
+
+## Web Loader
+
+### Single URL
+
+`https://example.com` → `WebBaseLoader` → `Document`
+
+### Multiple URLs
+
+```text
+example.com/page1  ─┐                   Document [0]
+example.com/page2  ─┤ → WebBaseLoader → Document [1]
+example.com/page3  ─┘                   Document [2]
+
+```
+
+## Directory Loader
+
+### Flow (Left → Right)
+
+**Input: `docs/`** → **`DirectoryLoader`** → **Output Documents**
+
+```markdown
+docs/            **DirectoryLoader**          
+├── report.pdf   ├── path: "docs/"    →   Doc  report.pdf
+├── notes.txt    ├── glob: "**/*.pdf" →   Doc  guide.pdf
+├── data.csv   → └── loader_cls:      →   Doc  summary.pdf
+├── guide.pdf         PyPDFLoader
+├── readme.txt
+└── summary.pdf
+```
+Here is the **glob pattern filters** note converted to Markdown:
+
+```markdown
+> **Note:** glob pattern filters files. `"**/*.pdf"` = all PDFs in all subdirectories.
+```
+## Loaders Hands on
+
+```bash
+source .venv/Scripts/activate
+cd langchain-course/
+
+pyenv global 3.12.10
+pyenv local 3.12.10
+
+uv run document_loaders.py
+```
+
+## Why Chunking Matters
+
+```markdown
+┌─────────────────────────────┐
+│  📄 Large Document          │  ← 50,000 tokens
+│  (gray)                     │
+└──────────────┬──────────────┘
+               ▼
+┌─────────────────────────────┐
+│  ✂️  Text Splitter          │  ← chunking
+│  (purple)                   │
+└──────────────┬──────────────┘
+               ▼
+┌─────────────────────────────┐
+│  🧩 Chunks                  │  ← 500–1000 tokens
+│  (green)                    │
+└──────────────┬──────────────┘
+               ▼
+┌─────────────────────────────┐
+│  🔢 Embeddings              │  ← vectors
+│  (blue)                     │
+└──────────────┬──────────────┘
+               ▼
+┌─────────────────────────────┐
+│  🗄️  Vector Store           │  ← searchable
+│  (tan/brown)                │
+└─────────────────────────────┘
+```
+
+---
+
+### 🔑 Key Considerations
+
+> **🔵 LLMs have context limits**
+> Must fit within token window
+
+> **🟢 Smaller chunks = precise retrieval**
+> Better relevance matching
+
+> **🟠 Too small = lose context**
+> Incomplete information
+
+> **🔴 Too large = noise in retrieval**
+> Irrelevant content included
+
+---
+
+## RecursiveCharacterTextSplitter `Default`
+
+```note
+┌─────────────────────┐        ┌──────────────────────────────┐        ┌─────────────────────┐
+│      Document       │        │        Splitter Config       │        │       Chunks        │
+│                     │        │                              │        │                     │
+│  Paragraph 1...     │        │  chunk_size                  │        │  ┌───────────────┐  │
+│  \n\n               │  ───►  │    1000                      │  ───►  │  │    Chunk 1    │  │
+│  Paragraph 2...     │        │                              │        │  └───────┬───────┘  │
+│  \n                 │        │  chunk_overlap               │        │        overlap      │
+│  Line 3...          │        │    200                       │        │  ┌───────▼───────┐  │
+│  Words...           │        │                              │        │  │    Chunk 2    │  │
+│                     │        │  separators                  │        │  └───────┬───────┘  │
+│                     │        │  ["\n\n", "\n", " "]         │        │        overlap      │
+│                     │        │                              │        │  ┌───────▼───────┐  │
+│                     │        │                              │        │  │    Chunk 3    │  │
+│                     │        │                              │        │  └───────────────┘  │
+└─────────────────────┘        └──────────────────────────────┘        └─────────────────────┘
+```
+
+- RecursiveCharacterTextSplitter 只有在**無法**透過目前的 Separator 將文字切分成**符合 chunk_size 的 Chunk** 時，才會繼續使用下一層 Separator 遞迴切割；此時才可能套用 **chunk_overlap**。
+- 如果透過適當的分隔符（例如 \n\n、\n 或空格）就能切出小於 chunk_size 的 Chunk，則會直接以該分隔點切割，不會因為設定了 chunk_overlap 而刻意加入重疊內容。
+
+---
+
+### Split Priority
+
+> Tries paragraph breaks first, then lines, then spaces, then characters.
+
+| Priority | Separator | Represents        |
+|----------|-----------|-------------------|
+| 1st      | `\n\n`    | Paragraph breaks  |
+| 2nd      | `\n`      | Line breaks       |
+| 3rd      | `" "`     | Spaces            |
+| 4th      | `""`      | Characters        |
+
+---
+
+### Chunk Size Guidelines
+
+| Use Case          | Chunk Size    | Overlap   | Why       |
+|-------------------|---------------|-----------|-----------|
+| Q&A / FAQ         | 500 - 800     | 50 - 100  | Precision |
+| Documentation     | 1000 - 1500   | 200       | Context   |
+| Code              | 1500 - 2000   | 200       | Functions |
+| Books / Articles  | 800 - 1200    | 150       | Balance   |
+
+
+#### Chunk Size Scale
+
+| Too Small | Optimal | Too Large |
+|-----------|---------|-----------|
+| ◄─────────|─────────|─────────► |
+
+---
+
+RFI (Request for Information) and RFP (Request for Proposal) documents often have a **Q&A** or **requirements-list** structure, so the FAQ chunking strategy (500–800 tokens, 50–100 overlap) is generally the right starting point. Each question/requirement is discrete and self-contained, so smaller chunks help the retriever return the precise answer to a specific question.
+
+However, RFPs in particular can blur the line depending on the section. For example:
+
+- **Q&A / requirements sections** → chunk as FAQ (500–800 tokens). Precise retrieval of specific answers.
+- **Scope of work or technical approach sections** → these are more narrative and interconnected, so bumping up closer to the Documentation range (1000–1500 tokens) may work better.
+- **Compliance or legal sections** → similar to documentation, context between clauses matters.
+
+So the practical advice is: **don't treat the whole RFP as one type**. Split it by section type and apply different chunking strategies per section. This hybrid approach tends to outperform using a single chunk size across the entire document.
+
+---
+
+## Semantic Chunking `Advanced`
+
+---
+
+```
+┌──────────────────────────┐      ┌──────────────────────────────┐      ┌──────────────────────────┐
+│  Document (mixed topics) │      │        SemanticChunker       │      │      Semantic Chunks     │
+│                          │      │                              │      │                          │
+│  ML is powerful...       │      │  1  Embed sentences          │      │  ┌────────────────────┐  │
+│  Models learn patterns...│      │                              │      │  │ ML Topic           │  │
+│  Pizza is delicious...   │  ──► │  2  Measure similarity       │  ──► │  │ ML is powerful...  │  │
+│  Italian food varies...  │      │                              │      │  │ Models learn...    │  │
+│  Deep learning uses...   │      │  3  Group by meaning         │      │  │ Deep learning...   │  │
+│  Neural networks...      │      │                              │      │  │ Neural networks... │  │
+│                          │      │                              │      │  └────────────────────┘  │
+│                          │      │                              │      │                          │
+│                          │      │                              │      │  ┌────────────────────┐  │
+│                          │      │                              │      │  │ Food Topic         │  │
+│                          │      │                              │      │  │ Pizza is delicious │  │
+│                          │      │                              │      │  │ Italian food varies│  │
+│                          │      │                              │      │  └────────────────────┘  │
+└──────────────────────────┘      └──────────────────────────────┘      └──────────────────────────┘
+```
+
+---
+
+> ⚠️ Requires embeddings API calls. Best for documents with **mixed** topics.
+
+## Chunks Hands on
+
+```bash
+uv run text_splitters.py 
+```
+
+---
+
+## What is RAG (Retrieval-Augmented Generation)?
+
+### Traditional LLM
+
+`User question` → `LLM` → `Answer (limited knowledge)`
+
+### RAG System:
+
+`User question` → `Retrieve relevant docs` → `LLM + docs` → `Answer (accurate answer)`
+
+---
+
+## RAG Architecture - Breakdown
+
+### Indexing (one-time setup)
+1. Documents
+2. Chunks
+3. Embeddings
+4. Vector DB
+
+### Retrieval (per query)          
+1. Question
+2. Embedding
+3. Search (Query Embedding → Vector Database)
+4. Relevant chunks
+
+### Generation
+1. Question + Relevant chunks
+2. LLM
+3. Generated response
+
+---
+
+### A Indexing Flow (right path)
+Knowledge Base / Documents → Chunking & Indexing → Embedding Model → Vector Database
+
+### B Query Flow (left path)
+User Query → Embedding Model → Query Embedding → Vector Database → Query + Retrieve Relevant Chunks → LLM → Generated Response
+
+---
+
+## Indexing - Chunking - Why?
+
+### Example: Splitting a document
+100-page user manual → splits into:
+- Section 1 → Specific topic
+- Section 2 → Specific topic
+- Section 3 ... → Specific topic
+
+**Result:** Improves efficiency | Contextually meaningful information
+
+> Dividing large docs into smaller, semantically coherent pieces:
+- Fit within embedding model token limits *(more on this later)*
+- Contain complete thoughts or concepts
+- Maintain enough context to be understood independently
+- Optimized for both **storage** and **retrieval**
+
+### Indexing - Why Chunking Matters
+
+- Large documents (1,000's of pages), hard for LLMs to digest and keep the full context.
+- Embedding models have token limits
+- LLMs have **context window**
+- We need to retrieve the most **relevant information efficiently**
+
+> Chunking must be just right for the RAG to work!
+
+## Why RAG Beats Alternatives
+
+| Approach          | Pros                | Cons                                   |
+|--------------------|----------------------|------------------------------------------|
+| Fine-Tuning        | Deep Customization  | Expensive, slow, requires ML expertise   |
+| Prompt Engineering | Free, fast           | Limited by context window                |
+| RAG                | Best of both worlds | Requires vector DB setup                 |
+
+---
+
+### RAG Advantages
+
+- **Up-to-date**
+- **Transparent** *(see which docs were used)*
+- **Cost-effective** *(no retraining)*
+- **Accurate** *(grounded in real sources)*
+- **Scalable** *(**millions** of documents)*
+
+---
+
+## Vectors and Dimensions
+
+### 2D Vector
+`[3, 2]`
+Position on a map
+
+### 3D Vector
+`[3, 2, 5]`
+Position in space
+
+### AI Vector
+`[0.23, -0.45, 0.67, ..., 0.12]`
+1536 dimensions!
+Represents meaning
+
+### Vectors and Dimensions Example
+
+🏠 Describe a **House** with many features...
+
+[3, 2, 1500, 2005, 0.8, 0.3, 0.9] =
+[bedrooms, bathrooms, sqft, year_built, kitchen_quality, location_score, condition]
+
+Here's the slide content converted to Markdown:
+
+### Vectors and Similarity
+
+**Distance = Similarity**
+
+#### Vector A: "dog"
+`[0.5, 0.8, 0.2]`
+
+#### Vector B: "puppy"
+`[0.6, 0.7, 0.3]`
+
+#### Vector C: "car"
+`[0.1, 0.2, 0.9]`
+
+##### Similarity Scores:
+- 🐕 "dog" ↔ "puppy": **0.984 (very similar!)**
+- 🐕 "dog" ↔ "car": **0.436 (not similar)**
+
+This is how AI "understands" that dog and puppy are related!
+
+**We measure how "close" vectors are using mathematical distance**
+
+> The formula is:
+cosine_similarity(A, B) = (A · B) / (‖A‖ × ‖B‖)
+where A · B is the dot product of the two vectors, and ‖A‖, ‖B‖ are their magnitudes (Euclidean norms).
+
+Dog 与 Puppy：
+
+- 点积：(0.5×0.6) + (0.8×0.7) + (0.2×0.3) = 0.30 + 0.56 + 0.06 = 0.92
+- ‖dog‖ = √(0.5² + 0.8² + 0.2²) = √0.93 ≈ 0.9644
+- ‖puppy‖ = √(0.6² + 0.7² + 0.3²) = √0.94 ≈ 0.9695
+
+余弦相似度 = 0.92 / (0.9644 × 0.9695) = 0.92 / 0.9351 ≈ **0.984**
+
+Dog 与 Car：
+
+- 点积：(0.5×0.1) + (0.8×0.2) + (0.2×0.9) = 0.05 + 0.16 + 0.18 = 0.39
+- ‖dog‖ = √(0.5² + 0.8² + 0.2²) = √0.93 ≈ 0.9644
+- ‖car‖ = √(0.1² + 0.2² + 0.9²) = √0.86 ≈ 0.9274
+
+余弦相似度 = 0.39 / (0.9644 × 0.9274) = 0.39 / 0.8944 ≈ **0.436**
+
+## Vector Databases: The AI Memory System
+
+**Flow:** text/chunks → Embedding model → Vectorize → Vector store
+
+### Embedding model
+**AI models** convert text into vectors that capture ***semantic meaning!***
+
+### Vectorize -> Vector Store
+**Save** semantic meaning!
+
+## Embedding Hands On
+
+```bash
+uv run embeddings.py
+```

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./.venv/Scripts/python.exe -c \"import langchain_community.document_loaders.web_base as m; print\\(m.__file__\\)\")",
+      "Bash(./.venv/Scripts/python.exe document_loaders.py)",
+      "Bash(python -c ' *)",
+      "Bash(.venv/Scripts/python.exe -c ' *)",
+      "Read(//c/Users/samfi/.local/bin/**)",
+      "Bash(systeminfo)",
+      "Bash(cmd.exe /c \"echo %PROCESSOR_ARCHITECTURE%\")",
+      "Bash(/c/Users/samfi/.local/bin/uv.exe --version)",
+      "Bash(echo \"EXIT:$?\")",
+      "PowerShell(& \"C:\\\\Users\\\\samfi\\\\.local\\\\bin\\\\uv.exe\" --version)",
+      "PowerShell(Get-MpComputerStatus | Select-Object IsTamperProtected, RealTimeProtectionEnabled 2>&1; Write-Output \"---SmartAppControl---\"; try { \\(Get-CimInstance -Namespace root\\\\Microsoft\\\\Windows\\\\Sense -ClassName MDATPConfiguration -ErrorAction Stop\\) } catch { Write-Output \"n/a\" }; Write-Output \"---WDAC events---\"; Get-WinEvent -LogName \"Microsoft-Windows-CodeIntegrity/Operational\" -MaxEvents 5 -ErrorAction SilentlyContinue | Format-List TimeCreated, Id, Message)"
+    ]
+  }
+}
