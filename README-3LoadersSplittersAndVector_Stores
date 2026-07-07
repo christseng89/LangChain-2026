@@ -420,4 +420,45 @@ Dog 与 Car：
 
 ```bash
 uv run embeddings.py
+uv run embeddings_deep.py
 ```
+
+## Vector Database
+
+### 建議學習路線
+
+```text
+Documents → Chunking → Embeddings → Chroma
+      │
+      └──► Similarity Search
+                  │
+                  └──► Retriever
+                            │
+                            └──► RAG Chain
+                                      │
+                                      └──► Production
+                                           (Pinecone / Qdrant / Weaviate)
+```
+
+### 建議學習順序：
+
+1. 使用 **Chroma** 建立本機 RAG。
+2. 熟悉 **Embedding、Vector Store** 與 **Similarity Search** 的運作原理。
+3. 使用 **`as_retriever()`** 將 Vector Store 與 LangChain RAG Chain 整合。
+4. 正式上線時，再遷移至 **Pinecone、Qdrant** 或 **Weaviate** 等 Production 級向量資料庫。
+
+---
+
+### 重點整理
+
+- **Vector Store** 是 **RAG** 的核心元件，負責儲存向量並執行相似度搜尋。
+- 文件需先切割為 **Chunks**，再透過 **Embedding Model** 轉換成向量並建立索引。
+- 使用者 **Query** 同樣會轉換成向量，再透過 **Similarity Search** 找出最相關的 **Top-K** Documents。
+- **Chroma** 是免費且易於使用的 Vector Database，非常適合本機開發、教學與 Prototype。
+- LangChain 常用 API：
+  - `add_documents()`：新增文件並建立索引。
+  - `similarity_search()`：回傳最相關文件。
+  - `similarity_search_with_score()`：回傳文件及相似度分數。
+  - `as_retriever()`：將 Vector Store 包裝成 Retriever，供 RAG Chain 使用。
+- Production 環境通常會選擇 **Pinecone、Qdrant** 或 **Weaviate** 等更具擴充性的向量資料庫。
+
