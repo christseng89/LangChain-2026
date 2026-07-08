@@ -25,7 +25,10 @@
       "PowerShell(Get-Command ssh-keygen -ErrorAction SilentlyContinue)",
       "WebSearch",
       "PowerShell($env:Path += \";$env:LOCALAPPDATA\\\\Programs\\\\Ollama\"; ollama list)",
-      "PowerShell($env:Path += \";$env:LOCALAPPDATA\\\\Programs\\\\Ollama\"; ollama pull qwen3-embedding:8b)"
+      "PowerShell($env:Path += \";$env:LOCALAPPDATA\\\\Programs\\\\Ollama\"; ollama pull qwen3-embedding:8b)",
+      "Bash(./.venv/Scripts/python.exe -c ' *)",
+      "Bash(./.venv/Scripts/python.exe vector_stores.py)",
+      "Bash(sqlite3 chroma_db/chroma.sqlite3 \".tables\")"
     ]
   }
 }

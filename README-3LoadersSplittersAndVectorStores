@@ -453,12 +453,57 @@ Documents → Chunking → Embeddings → Chroma
 
 - **Vector Store** 是 **RAG** 的核心元件，負責儲存向量並執行相似度搜尋。
 - 文件需先切割為 **Chunks**，再透過 **Embedding Model** 轉換成向量並建立索引。
-- 使用者 **Query** 同樣會轉換成向量，再透過 **Similarity Search** 找出最相關的 **Top-K** Documents。
+- 使用者 **Query** 同樣會轉換成向量，再透過 **Similarity Search** 找出**最相似**的 **Top-K** Documents。
 - **Chroma** 是免費且易於使用的 Vector Database，非常適合本機開發、教學與 Prototype。
-- LangChain 常用 API：
-  - `add_documents()`：新增文件並建立索引。
-  - `similarity_search()`：回傳最相關文件。
+- LangChain **常用** APIs：
+  - `add_documents(docs)`：新增文件並建立索引。
+  - `similarity_search(q, k=4)`：回傳最相似文件。
   - `similarity_search_with_score()`：回傳文件及相似度分數。
   - `as_retriever()`：將 Vector Store 包裝成 Retriever，供 RAG Chain 使用。
 - Production 環境通常會選擇 **Pinecone、Qdrant** 或 **Weaviate** 等更具擴充性的向量資料庫。
+
+## Vector Database Production Options
+
+| Store    | Best For              | Cost    | Type   |
+|----------|------------------------|---------|--------|
+| **Chroma**   | Local dev, prototyping | Free    | Local  |
+| FAISS    | Speed, in-memory       | Free    | Local  |
+| Pinecone | Production, managed    | $70+/mo | Cloud  |
+| Weaviate | Self-hosted, hybrid    | Free/Paid | Hybrid |
+| Qdrant   | Performance, filtering | Free/Paid | Hybrid |
+
+---
+
+## Hands on Vector Store
+
+```bash
+uv run vector_stores.py
+```
+
+## 什么是 MMR
+
+MMR（Maximal Marginal Relevance，最大边际相关性）是一种检索算法，目标是在"与查询**相关**"和"结果之间彼此**不重复**"之间做平衡，而不是单纯返回最相似的几条结果。
+
+它的做法大致是：
+
+1. 先按**相似度**取出一批**候选**文档（数量由 `fetch_k` 控制）。
+2. 然后逐一挑选最终结果：每一步都在"与查询的**相关性**"和"与已选中的文档**差异性**"之间做权衡，优先选择那些既相关、又和已选文档不太像的文档。
+3. 重复这个过程，直到选够 `k` 个（代码里是 `k=top_k` 即 3 个）。
+
+### MMR 和 Similarity 的区别
+
+| 维度 | Similarity（相似度检索） | MMR |
+|------|--------------------------|-----|
+| 排序依据 | 只看与查询向量的距离/相似度，取 top-k | 相关性 + 多样性的综合权衡 |
+| 结果特点 | 可能高度雷同（比如多篇内容几乎重复的文档） | 结果更分散、覆盖面更广，减少冗余 |
+| 参数 | 只需要 `k` | 需要 `k` 和 `fetch_k`（先捞多一点候选池，再从中挑多样化的结果） |
+| 适用场景 | 想要"最像"的答案，比如精确问答 | 想要"全面"的答案，比如摘要、多角度调研、避免重复信息喂给 LLM |
+
+简单说：Similarity 只问"像不像"，MMR 还多问一句"和已经选的那些像不像"——如果太像就降低优先级，从而保证**返回结果的多样性**。
+
+> 用 similarity 检索可能会返回好几篇内容相近的"数据库"类文档；而 MMR 会在保证相关的前提下，尽量挑选内容差异更大的文档，避免返回内容重复的结果。
+
+## SQLite DB Viewer - Extension
+
+> SQLite DB Viewer is a professional, feature-rich database explorer for Visual Studio Code. View, analyze, filter, and edit SQLite databases (.db, .sqlite, .sqlite3) directly within your editor. The interface is meticulously designed to match the native look and feel of VS Code, ensuring a seamless and intuitive workflow.
 
