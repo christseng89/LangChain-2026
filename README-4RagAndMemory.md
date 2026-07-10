@@ -172,3 +172,5 @@ pyenv local 3.12.10
 
 uv run rag_pipeline.py
 ```
+
+> {{context}} 不要被 Python 解讀，而是保留給 LangChain。
