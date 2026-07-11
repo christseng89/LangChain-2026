@@ -27,6 +27,7 @@ flowchart TD
 ## Basic RAG Chain
 
 **Diagram 1 – Chain Structure**
+
 ```mermaid
 flowchart LR
     subgraph Chain["Chain Structure"]
@@ -41,6 +42,7 @@ flowchart LR
 ```
 
 **Diagram 2 – Prompt Template & Parallel Input Processing**
+
 ```mermaid
 flowchart TD
     subgraph Prompt["Prompt Template"]
@@ -60,6 +62,7 @@ flowchart TD
 ```
 
 **Notes from the diagram:**
+
 - `context` pulls from the **retriever**, while `question` passes straight through via **RunnablePassthrough** ("Question passes through unchanged").
 - The prompt template combines them: *"Answer based only on: {context} — Question: {question}"*.
 - Overall chain: `{context, question} → prompt → llm → parser`.
@@ -67,7 +70,6 @@ flowchart TD
 ---
 
 ## Handling "I Don't Know"
-
 
 ```mermaid
 flowchart LR
@@ -114,7 +116,6 @@ flowchart TD
 
 ## RAG with Sources
 
-
 ```mermaid
 flowchart LR
 
@@ -143,7 +144,6 @@ flowchart LR
     style Formatted fill:#ffffff,stroke:#2e7d4f,color:#2e7d4f
 ```
 
-
 > **Summary:** The `retriever` returns raw document chunks, each tagged with its source. The `format_docs_with_sources` function processes these chunks and attaches a `[Source: ...]` tag to each one, producing a formatted context block that preserves traceability back to the original documents.
 
 > Users can verify answers.  Enable citation in responses. Builds trust. 使用者可驗證回答來源，並在回應中顯示引用（Citation），提升答案的可信度。
@@ -159,6 +159,7 @@ flowchart LR
     | StrOutputParser()
   )
 ```
+
 ---
 
 ## Hands on Basic RAG
@@ -174,3 +175,341 @@ uv run rag_pipeline.py
 ```
 
 > {{context}} 不要被 Python 解讀，而是保留給 LangChain。
+
+---
+
+## 🎯 Advanced RAG
+
+### 🔴 Basic RAG Limitations
+
+| #    | Limitation                         | Impact                          |
+| ---- | ---------------------------------- | ------------------------------- |
+| 🔴① | **Single query perspective** | → Misses relevant docs         |
+| 🔴② | **No metadata filtering**    | → Retrieves irrelevant content |
+| 🔴③ | **Full chunks returned**     | → Noise in context             |
+| 🔴④ | **Keyword OR semantic**      | → Not both together            |
+
+### 🟢 Advanced RAG Solutions
+
+- 🟣 **Multi-Query Retriever** — Multiple perspectives
+
+````markdown
+    Query1 ─┐
+    Query2 ─┼──► Vector Store
+    Query3 ─┤
+    Query4 ─┘
+````
+
+- 🔵 **Self-Query Retriever** — Auto metadata filters
+
+````markdown
+    Vector Search
+    +
+    Metadata Filter
+````
+
+- 🟠 **Contextual Compression** — Extract relevant parts
+
+    > Chunk 大 + 相關資訊密度低 → compression 值得用（省下的 token/降低干擾 多付出的 LLM 呼叫成本）
+    > Chunk 小 + 本來就很聚焦 → compression 通常不划算，純粹增加延遲和費用
+
+```markdown
+
+    - Token 少很多
+    - 成本降低
+    - 答案更精準
+```
+
+- 🟢 **Hybrid Search** — Keywords + semantic
+
+````markdown
+# Hybrid Search
+                    User Query
+                        │
+            ┌─────────────┴─────────────┐
+            ▼                           ▼
+    Keyword Search (BM25)      Vector Search
+    找完全匹配文字               找語意相近內容
+            │                           │
+            └─────────────┬─────────────┘
+                        ▼
+                Hybrid Ranking
+                        ▼
+        更完整、更精確的搜尋結果
+
+> BM25: Best Matching 25, Elasticsearch、OpenSearch、Lucene 等搜尋引擎的預設排名演算法。
+
+## Example
+
+        User Query: 
+        What fields are required in MT700?
+                │
+                ▼
+        Retriever
+        (Vector Search)
+                │
+                ▼
+        Top-3 Retrieved Chunks
+
+        1. Source: SWIFT MT700 Specification
+        - Field 20
+        - Field 40A
+        - Field 31D
+
+        2. Source: Import LC Product Manual
+        - MT700 Generation
+
+        3. Source: LC Issue User Guide
+        - Issue Screen Mapping
+
+````
+
+| 技術                               | 解決什麼問題           | 實際例子                             |
+| ---------------------------------- | ---------------------- | ------------------------------------ |
+| 🟣**Multi-Query Retriever**  | 從不同角度搜尋         | 同一個問題產生多個 Query，提高召回率 |
+| 🔵**Self-Query Retriever**   | 自動加 Metadata Filter | LLM 自動判斷要搜尋哪些文件           |
+| 🟠**Contextual Compression** | 去除無關內容           | 只保留與問題相關的段落               |
+| 🟢**Hybrid Search**          | Keyword + Semantic     | 同時利用關鍵字與向量搜尋             |
+
+---
+
+```markdown
+# Advanced RAG Architecture
+
+          User Question
+               │
+               ▼
+┌─────────────────────────────┐
+│ Multi-Query Retriever       │
+│ 同一問題產生多個 Query       │
+│ Via LLM                     │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│ Self-Query Retriever        │
+│ 自動加入 Metadata Filter     │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│ Hybrid Search               │
+│ Keyword + Vector Search     │
+└──────────────┬──────────────┘
+               │
+               ▼
+         Retrieved Documents
+               │
+               ▼
+┌─────────────────────────────┐
+│ Contextual Compression      │
+│ 移除無關內容，只保留重點      │
+└──────────────┬──────────────┘
+               │
+               ▼
+              LLM
+
+```
+
+---
+
+## 🟣 Multi-Query Retriever
+
+```mermaid
+flowchart TD
+
+    Q["Original Query<br/>What are the benefits of exercise?"]:::query
+
+    LLM["LLM<br/>Generate Query Variations"]:::llm
+
+    Q --> LLM
+
+    LLM --> Q1["Query 1<br/>How does physical activity improve health?"]:::variation
+    LLM --> Q2["Query 2<br/>What positive effects does working out have?"]:::variation
+    LLM --> Q3["Query 3<br/>Why should people exercise regularly?"]:::variation
+
+    Q1 --> R1["Retriever<br/>Results 1"]:::result
+    Q2 --> R2["Retriever<br/>Results 2"]:::result
+    Q3 --> R3["Retriever<br/>Results 3"]:::result
+
+    R1 --> M["Merge and Deduplicate"]:::merge
+    R2 --> M
+    R3 --> M
+
+    M --> O["Unique Retrieved Chunks"]:::output
+
+    classDef query fill:#f5f5f5,stroke:#aaaaaa,color:#333;
+    classDef llm fill:#8a6fa8,stroke:#6c4f8c,color:#fff,font-weight:bold;
+    classDef variation fill:#eee7f5,stroke:#8a6fa8,color:#333;
+    classDef result fill:#eef8f1,stroke:#4f8f63,color:#2e7d4f;
+    classDef merge fill:#4f8f63,stroke:#2e6e43,color:#fff,font-weight:bold;
+    classDef output fill:#dff3df,stroke:#2e7d4f,color:#2e7d4f,font-weight:bold;
+```
+
+---
+
+## ⚪ Self-Query Retriever
+
+```mermaid
+flowchart TD
+
+    Q["User Query<br/><br/>Show Import LC manuals<br/>after 2024"]:::query
+
+    LLM["LLM<br/>Parse Query"]:::llm
+
+    Q --> LLM
+
+    LLM --> SQ
+    LLM --> MF
+
+    subgraph SQ["Semantic Query"]
+        direction TB
+        S1["Import LC"]:::semantic
+    end
+
+    subgraph MF["Metadata Filter (Auto-generated)"]
+        direction TB
+        M1["module = Import LC<br/>year >= 2024<br/>doc_type = Manual"]:::metadata
+    end
+
+    SQ --> R
+    MF --> R
+
+    R["Retriever"]:::retriever
+
+    R --> O["Top-K Retrieved Chunks"]:::output
+
+    classDef query fill:#f5f5f5,stroke:#999,color:#333;
+    classDef llm fill:#6b9fd4,stroke:#4c7fb5,color:#fff,font-weight:bold;
+    classDef semantic fill:#eee7f5,stroke:#8a6fa8,color:#333;
+    classDef metadata fill:#fdf3ea,stroke:#c98d5d,color:#8a5a32;
+    classDef retriever fill:#4f8f63,stroke:#2e6e43,color:#fff,font-weight:bold;
+    classDef output fill:#dff3df,stroke:#2e7d4f,color:#2e7d4f;
+
+    style SQ fill:#ffffff,stroke:#8a6fa8
+    style MF fill:#ffffff,stroke:#c98d5d
+```
+---
+
+## MultiQueryRetriever vs SelfQueryRetriever
+
+| 比較項目          | 🟣 MultiQueryRetriever | 🔵 SelfQueryRetriever           |
+| ------------- | ---------------------- | ------------------------------- |
+| 核心目的          | 提高 **Recall（召回率）**     | 提高 **Precision（精確率）**           |
+| LLM 的工作       | 將一個問題改寫成多個 Query       | 解析問題並產生 Query + **Metadata Filter** |
+| 解決問題          | 同一種問法可能找不到所有相關文件       | 文件太多，需要**縮小搜尋**範圍                   |
+| 搜尋次數          | **多次**搜尋，再合併結果             | 通常**一次**搜尋，但加入 Filter               |
+| 是否使用 Metadata | ❌ 不需要                  | ✅ 需要                            |
+
+### 一句話總結
+| Retriever                  | 核心概念                                                                              |
+| -------------------------- | --------------------------------------------------------------------------------- |
+| 🟣 **MultiQueryRetriever** | **Expand the Query**：將一個問題改寫成多個 Query，提高 **Recall**，避免漏掉相關文件。                     |
+| 🔵 **SelfQueryRetriever**  | **Add Metadata Filters**：從問題中推論搜尋條件，自動加入 Metadata Filter，提高 **Precision**，縮小搜尋範圍。 |
+
+---
+
+## Context Compression Retrival
+
+```mermaid
+flowchart LR
+
+    A["Top-K Retrieved Chunks<br/><br/>包含相關與不相關內容"]:::input
+
+    B["Contextual Compressor<br/><br/>LLM / Embedding Filter / Re-ranker"]:::compressor
+
+    C["Compressed Context<br/><br/>只保留與 Query 相關的段落"]:::output
+
+    D["Final LLM<br/><br/>產生更精準的回答"]:::llm
+
+    A --> B --> C --> D
+
+    classDef input fill:#f5f5f5,stroke:#999999,color:#333;
+    classDef compressor fill:#b98255,stroke:#8d603d,color:#ffffff,font-weight:bold;
+    classDef output fill:#e6f4e8,stroke:#4f8f63,color:#2e7d4f;
+    classDef llm fill:#e8e0f2,stroke:#6c4f8c,color:#333,font-weight:bold;
+```
+
+## Hybrid Search (BM25 + Semantic)
+
+```mermaid
+flowchart TD
+
+    Q["User Query"]:::query
+
+    Q --> BM25
+    Q --> Vector
+
+    subgraph BM25["BM25 Retriever"]
+        direction TB
+        B1["Keyword Matching 40%"]:::desc
+        B2["Best for:<br/>Exact terms<br/>Names<br/>Codes"]:::bm25
+    end
+
+    subgraph Vector["Semantic Retriever"]
+        direction TB
+        V1["Vector Search 60%"]:::desc
+        V2["Best for:<br/>Concepts<br/>Synonyms<br/>Meaning"]:::semantic
+    end
+
+    BM25 --> Merge
+    Vector --> Merge
+
+    Merge["Hybrid Ranking<br/>(EnsembleRetriever)"]:::ensemble
+
+    Merge --> Docs["Top-K Retrieved Chunks"]:::output
+
+    classDef query fill:#f5f5f5,stroke:#999,color:#333;
+    classDef desc fill:#ffffff,stroke:#dddddd,color:#555;
+    classDef bm25 fill:#c98d5d,stroke:#a66c3b,color:#fff;
+    classDef semantic fill:#6b9fd4,stroke:#4c7fb5,color:#fff;
+    classDef ensemble fill:#4f8f63,stroke:#2e6e43,color:#fff,font-weight:bold;
+    classDef output fill:#dff3df,stroke:#2e7d4f,color:#2e7d4f;
+
+    style BM25 fill:#ffffff,stroke:#c98d5d
+    style Vector fill:#ffffff,stroke:#6b9fd4
+```
+
+## Parent Document Retriever
+
+```mermaid
+flowchart TD
+
+    D["Original Document"]:::document
+
+    D --> P["Parent Chunk<br/>1000 characters"]:::parent
+
+    P --> C1["Child Chunk 1<br/>200 characters"]:::child
+    P --> C2["Child Chunk 2<br/>200 characters"]:::child
+    P --> C3["Child Chunk 3<br/>200 characters"]:::child
+    P --> C4["Child Chunk 4<br/>200 characters"]:::child
+    P --> C5["Child Chunk 5<br/>200 characters"]:::child
+
+    Q["User Query"]:::query
+
+    Q --> VS["Vector Search<br/>Search Small Child Chunks"]:::search
+
+    C1 --> VS
+    C2 --> VS
+    C3 --> VS
+    C4 --> VS
+    C5 --> VS
+
+    VS --> Match["Matched Child Chunk"]:::matched
+
+    Match --> Lookup["Use Parent ID<br/>Lookup Parent Chunk"]:::lookup
+
+    Lookup --> Context["Return Large Parent Chunk<br/>Full Context"]:::context
+
+    Context --> LLM["LLM"]:::llm
+
+    classDef document fill:#f5f5f5,stroke:#999,color:#333;
+    classDef parent fill:#eee7f5,stroke:#8a6fa8,color:#6c4f8c,font-weight:bold;
+    classDef child fill:#e6f4e8,stroke:#4f8f63,color:#2e7d4f;
+    classDef query fill:#f5f5f5,stroke:#999,color:#333;
+    classDef search fill:#4f8f63,stroke:#2e6e43,color:#fff,font-weight:bold;
+    classDef matched fill:#dff3df,stroke:#2e7d4f,color:#2e7d4f;
+    classDef lookup fill:#fdf3ea,stroke:#c98d5d,color:#8a5a32;
+    classDef context fill:#eee7f5,stroke:#8a6fa8,color:#6c4f8c,font-weight:bold;
+    classDef llm fill:#6b9fd4,stroke:#4c7fb5,color:#fff,font-weight:bold;
+```

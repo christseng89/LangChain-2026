@@ -28,7 +28,12 @@
       "PowerShell($env:Path += \";$env:LOCALAPPDATA\\\\Programs\\\\Ollama\"; ollama pull qwen3-embedding:8b)",
       "Bash(./.venv/Scripts/python.exe -c ' *)",
       "Bash(./.venv/Scripts/python.exe vector_stores.py)",
-      "Bash(sqlite3 chroma_db/chroma.sqlite3 \".tables\")"
+      "Bash(sqlite3 chroma_db/chroma.sqlite3 \".tables\")",
+      "Bash(ls .venv/Scripts/python.exe)",
+      "Bash(.venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\('advanced_rag.py', encoding='utf-8'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
+      "Bash(.venv/Scripts/python.exe -c \"import advanced_rag; print\\('import OK'\\)\")",
+      "Bash(.venv/Scripts/python.exe -m pip install lark)",
+      "Bash(VIRTUAL_ENV=\"\" uv pip install --python .venv/Scripts/python.exe lark)"
     ]
   }
 }
