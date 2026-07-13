@@ -513,3 +513,15 @@ flowchart TD
     classDef context fill:#eee7f5,stroke:#8a6fa8,color:#6c4f8c,font-weight:bold;
     classDef llm fill:#6b9fd4,stroke:#4c7fb5,color:#fff,font-weight:bold;
 ```
+
+## Hands on Advanced RAG
+
+```bash
+source .venv/Scripts/activate
+cd langchain-course/
+
+pyenv global 3.12.10
+pyenv local 3.12.10
+
+uv run advanced_rag.py
+```
