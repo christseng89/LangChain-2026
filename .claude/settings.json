@@ -33,7 +33,9 @@
       "Bash(.venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\('advanced_rag.py', encoding='utf-8'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
       "Bash(.venv/Scripts/python.exe -c \"import advanced_rag; print\\('import OK'\\)\")",
       "Bash(.venv/Scripts/python.exe -m pip install lark)",
-      "Bash(VIRTUAL_ENV=\"\" uv pip install --python .venv/Scripts/python.exe lark)"
+      "Bash(VIRTUAL_ENV=\"\" uv pip install --python .venv/Scripts/python.exe lark)",
+      "Bash(python -c \"import langchain_community, os; print\\(os.path.dirname\\(langchain_community.__file__\\)\\)\")",
+      "Bash(grep -rn \"class SQLChatMessageHistory\" -A 40 \"$\\(python -c \"import langchain_community, os; print\\(os.path.dirname\\(langchain_community.__file__\\)\\)\" 2>/dev/null\\)/chat_message_histories/sql.py 2>/dev/null | head -80)"
     ]
   }
 }
