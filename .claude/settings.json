@@ -35,7 +35,14 @@
       "Bash(.venv/Scripts/python.exe -m pip install lark)",
       "Bash(VIRTUAL_ENV=\"\" uv pip install --python .venv/Scripts/python.exe lark)",
       "Bash(python -c \"import langchain_community, os; print\\(os.path.dirname\\(langchain_community.__file__\\)\\)\")",
-      "Bash(grep -rn \"class SQLChatMessageHistory\" -A 40 \"$\\(python -c \"import langchain_community, os; print\\(os.path.dirname\\(langchain_community.__file__\\)\\)\" 2>/dev/null\\)/chat_message_histories/sql.py 2>/dev/null | head -80)"
+      "Bash(grep -rn \"class SQLChatMessageHistory\" -A 40 \"$\\(python -c \"import langchain_community, os; print\\(os.path.dirname\\(langchain_community.__file__\\)\\)\" 2>/dev/null\\)/chat_message_histories/sql.py 2>/dev/null | head -80)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('conversation_memory.py'\\).read\\(\\)\\)\")",
+      "Bash(uname -m)",
+      "Bash(echo \"---\")",
+      "Bash(powershell.exe -NoProfile -Command '$env:PROCESSOR_ARCHITECTURE')",
+      "Bash(echo PROCESSOR_ARCHITECTURE=__TRACKED_VAR__)",
+      "Bash(file /c/Users/samfi/.local/bin/uvx.exe /c/Users/samfi/.local/bin/uvw.exe 2>&1)",
+      "Bash(powershell.exe -NoProfile -Command \"irm https://astral.sh/uv/install.ps1 | iex\")"
     ]
   }
 }
