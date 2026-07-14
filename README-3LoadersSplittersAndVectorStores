@@ -507,3 +507,15 @@ MMR（Maximal Marginal Relevance，最大边际相关性）是一种检索算法
 
 > SQLite DB Viewer is a professional, feature-rich database explorer for Visual Studio Code. View, analyze, filter, and edit SQLite databases (.db, .sqlite, .sqlite3) directly within your editor. The interface is meticulously designed to match the native look and feel of VS Code, ensuring a seamless and intuitive workflow.
 
+## Vector Store Strategy
+
+| 功能                            | Demo                                 | 解決什麼問題               | 真實使用時機                 |
+| ----------------------------- | ------------------------------------ | -------------------- | ---------------------- |
+| Basic Similarity Search       | `chroma_basics()`                    | 找最相似內容               | FAQ、知識庫                |
+| Similarity Search with Scores | `similarity_search_with_scores()`    | 知道相似程度               | AI Confidence、Top-N    |
+| Metadata Filtering            | `metadata_filtering()`               | 限制搜尋範圍               | Banking、Product Search |
+| Persistent Vector Store       | `persist_chroma()`                   | 重啟後不用重新建立 Embeddings | Production AI          |
+| Vector Store as Retriever     | `vs_as_retriever()`                  | 與 LangChain RAG 整合   | 幾乎所有 RAG               |
+| MMR Retriever                 | `vs_as_retriever(search_type="mmr")` | 避免重複結果               | Long Documents         |
+| Exercise Setup                | `exercise_vector_store_setup()`      | 建立完整 Index Pipeline  | Production ETL         |
+

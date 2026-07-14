@@ -171,3 +171,15 @@ pyenv local 3.12.10
 
 uv run conversation_memory.py
 ```
+
+## Memory Strategy
+
+| Strategy                | Demo                                 | Memory 存放位置               | 真實使用時機                |
+| ----------------------- | ------------------------------------ | ------------------------- | --------------------- |
+| In-Memory               | `demo_basic_memory()`                | RAM                       | Demo、PoC、單機 Chatbot   |
+| Multi Session           | `demo_multi_sessions()`              | RAM（依 session_id）         | Web Chat、多使用者聊天       |
+| Message Trimming        | `demo_message_trimming()`            | RAM                       | Context 太長，需要控制 Token |
+| Window Memory           | `demo_windowed_memory()`             | RAM（最近 K 次）               | 一般客服聊天，不需完整歷史         |
+| Summary Memory          | `demo_summary_memory()`              | RAM (Summary + Recent Messages) | 長時間聊天（例如數百輪）          |
+| SQLite Memory           | `exercise_persistent_memory()`       | SQLite                    | 單機開發、桌面應用、小型系統        |
+| Persistent Memory Proof | `exercise_persistent_memory_proof()` | SQLite                    | 驗證重啟後仍保留 Memory       |
