@@ -47,7 +47,8 @@
       "Bash(python -c \"import langchain_classic.retrievers as r; print\\(r.__file__\\)\")",
       "Bash(.venv/Scripts/python.exe -c \"import langchain_classic.retrievers as r; print\\(r.__file__\\)\")",
       "Bash(.venv/Scripts/python.exe -c \"import langchain_classic.retrievers.contextual_compression as c; print\\(c.__file__\\)\")",
-      "Bash(.venv/Scripts/python.exe -c \"import langchain_classic.retrievers.document_compressors as dc; print\\(dc.__file__\\)\")"
+      "Bash(.venv/Scripts/python.exe -c \"import langchain_classic.retrievers.document_compressors as dc; print\\(dc.__file__\\)\")",
+      "Bash(rm -rf ./research_db)"
     ]
   }
 }
