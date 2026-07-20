@@ -379,3 +379,181 @@ pyenv local 3.12.10
 
 uv run langgraph_core.py
 ```
+
+## Why Handoffs?
+
+### What Is a Handoff?
+
+A **handoff** transfers control of a request from one AI agent to another agent with more appropriate expertise.
+
+Instead of requiring one general-purpose agent to handle every request, a **Triage Agent** analyzes the user's intent and delegates the task to a suitable specialist.
+
+---
+
+> The Real-World Problem *"Every company with a chatbot hits the same wall — one agent can't do everything."*
+
+### Problem vs. Solution
+
+| Problem | Solution |
+|---|---|
+| **Customer:** “I was charged twice.” | **Triage Agent → Billing Specialist** |
+| A generic bot provides a vague answer, leaving the customer frustrated. | The request is routed to the appropriate specialist for faster and more accurate resolution. |
+
+---
+
+### The Problem: Generic Bot
+
+```mermaid
+flowchart LR
+
+    C["Customer<br/>&quot;I was charged twice.&quot;"]
+    G["Generic Bot"]
+    R["Vague Answer<br/>Customer Frustrated"]
+
+    C --> G
+    G --> R
+
+    style C fill:#E3F2FD,color:#000000,stroke:#1565C0,stroke-width:2px
+    style G fill:#9E9E9E,color:#FFFFFF,stroke:#616161,stroke-width:2px
+    style R fill:#FFCDD2,color:#000000,stroke:#C62828,stroke-width:2px
+```
+
+---
+
+### The Solution: Agent Handoff
+
+```mermaid
+flowchart LR
+
+    C["Customer Message<br/>&quot;I was charged twice.&quot;"]
+    T{"Triage Agent<br/>Who should handle this?"}
+    B["Billing Specialist"]
+    R["Issue Resolved"]
+
+    C --> T
+    T -- "Billing Issue" --> B
+    B --> R
+
+    style C fill:#E3F2FD,color:#000000,stroke:#1565C0,stroke-width:2px
+    style T fill:#9575CD,color:#FFFFFF,stroke:#512DA8,stroke-width:2px
+    style B fill:#FFB74D,color:#000000,stroke:#EF6C00,stroke-width:2px
+    style R fill:#81C784,color:#000000,stroke:#2E7D32,stroke-width:2px
+```
+
+---
+
+### Multi-Agent Handoff Flow
+
+```mermaid
+flowchart TD
+
+    M["Step 1<br/>Customer Message"]
+
+    T{"Step 2 (Triage Agent)<br/>Who should handle?"}
+
+    S["Step 3A<br/>Sales Agent"]
+    P["Step 3B<br/>Support Agent"]
+    B["Step 3C<br/>Billing Agent"]
+
+    R["Step 4<br/>Final Response"]
+
+    M --> T
+
+    T -- "Sales Request" --> S
+    T -- "Technical Issue" --> P
+    T -- "Payment Issue" --> B
+
+    S --> R
+    P --> R
+    B --> R
+
+    style M fill:#616161,color:#FFFFFF,stroke:#424242,stroke-width:2px
+    style T fill:#9575CD,color:#FFFFFF,stroke:#512DA8,stroke-width:2px
+    style S fill:#42A5F5,color:#FFFFFF,stroke:#1565C0,stroke-width:2px
+    style P fill:#66BB6A,color:#FFFFFF,stroke:#2E7D32,stroke-width:2px
+    style B fill:#FFB74D,color:#000000,stroke:#EF6C00,stroke-width:2px
+    style R fill:#26A69A,color:#FFFFFF,stroke:#00695C,stroke-width:2px
+```
+
+---
+
+### Why Use Handoffs?
+
+| Benefit | Description | Example |
+|---|---|---|
+| **Specialization** | Each agent focuses on a specific domain. | The Billing Agent handles invoices and payments. |
+| **Better Accuracy** | A domain-specific agent can provide more precise answers. | The Support Agent diagnoses technical problems. |
+| **Scalability** | New specialist agents can be added without redesigning the entire system. | Add AML or Trade Finance agents. |
+| **Maintainability** | Each agent maintains its own prompts, tools, and business rules. | Update the Billing Agent without affecting Sales. |
+
+---
+
+### Enterprise Handoff Example
+
+```mermaid
+flowchart TD
+
+    U["Customer Request"]
+    T{"Triage Agent<br/>Classify Intent"}
+
+    SALES["Sales Agent<br/>Plans and Upgrades"]
+    SUPPORT["Support Agent<br/>Technical Issues"]
+    BILLING["Billing Agent<br/>Payments and Refunds"]
+    AML["AML Agent<br/>Suspicious Transactions"]
+    TF["Trade Finance Agent<br/>LC and Documents"]
+
+    U --> T
+
+    T -- "Upgrade Plan" --> SALES
+    T -- "Password Problem" --> SUPPORT
+    T -- "Charged Twice" --> BILLING
+    T -- "Suspicious Transaction" --> AML
+    T -- "Review Letter of Credit" --> TF
+
+    style U fill:#616161,color:#FFFFFF,stroke:#424242,stroke-width:2px
+    style T fill:#9575CD,color:#FFFFFF,stroke:#512DA8,stroke-width:2px
+    style SALES fill:#42A5F5,color:#FFFFFF,stroke:#1565C0,stroke-width:2px
+    style SUPPORT fill:#66BB6A,color:#FFFFFF,stroke:#2E7D32,stroke-width:2px
+    style BILLING fill:#FFB74D,color:#000000,stroke:#EF6C00,stroke-width:2px
+    style AML fill:#EF5350,color:#FFFFFF,stroke:#B71C1C,stroke-width:2px
+    style TF fill:#26A69A,color:#FFFFFF,stroke:#00695C,stroke-width:2px
+```
+
+---
+
+### Furthermore - Handoff vs. Tool Call
+
+| Handoff | Tool Call |
+|---|---|
+| Transfers control to another **AI agent**. | Invokes a **function, API, database, or external service**. |
+| The specialist agent continues using its own prompt, tools, and expertise. | The same agent normally retains control after receiving the tool result. |
+| Best suited to specialized reasoning and responsibility. | Best suited to performing a specific operation. |
+
+```mermaid
+flowchart LR
+
+    A["Main Agent"]
+
+    SA["Specialist Agent"]
+    T["Tool / API"]
+
+    A -- "Handoff<br/>Transfer Control" --> SA
+    A -- "Tool Call<br/>Perform Operation" --> T
+    T -- "Return Result" --> A
+
+    style A fill:#9575CD,color:#FFFFFF,stroke:#512DA8,stroke-width:2px
+    style SA fill:#FFB74D,color:#000000,stroke:#EF6C00,stroke-width:2px
+    style T fill:#42A5F5,color:#FFFFFF,stroke:#1565C0,stroke-width:2px
+```
+
+> **Rule of thumb**
+>
+> - **Tool Call** = Ask a tool to perform a specific operation.
+> - **Handoff** = Transfer the request to another specialist AI agent.
+
+
+## Hands on Handsoff
+
+```bash
+uv run agent_handoffs.py
+```
