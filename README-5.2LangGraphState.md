@@ -1162,4 +1162,9 @@ MemorySaver
 | Same `thread_id` | Resume an existing conversation |
 | Different `thread_id` | Start a new conversation |
 | Analogy | MemorySaver = Save System, thread_id = Save Slot |
-````
+
+### Hands on Human in the Loop
+
+```bash
+uv run human_in_loop.py
+```
