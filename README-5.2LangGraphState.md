@@ -1163,8 +1163,64 @@ MemorySaver
 | Different `thread_id` | Start a new conversation |
 | Analogy | MemorySaver = Save System, thread_id = Save Slot |
 
-### Hands on Human in the Loop
+### Hands on Checkpoint - Human in the Loop
 
 ```bash
 uv run human_in_loop.py
 ```
+
+## Hands on Checkpoint - Deep dive
+
+```bash
+uv run checkpointing.py 
+```
+
+## LangGraph State Section Summary
+
+### LangGraph Deep Dive
+
+> **State + Nodes + Edges = LangGraph**
+
+---
+
+### The Progression
+
+| Topic | Description |
+|--------|-------------|
+| **Basics** | State, Nodes, Edges |
+| **Conditional** | Dynamic routing |
+| **Loops** | Self-correction |
+| **HITL** | Human approval |
+| **Persistence** | Checkpointing |
+
+---
+
+### Key Takeaways
+
+| Topic | Details |
+|--------|---------|
+| **Reducers** | `Annotated[list, add]` = append |
+| **Loops** | Back-edges + max iteration guard |
+| **Checkpointing** | Checkpointer + `thread_id` |
+| **HITL** | `interrupt` + `update_state` + `invoke(None)` |
+| **thread_id** | Same = resume, Different = fresh |
+| **Backends** | `MemorySaver` / `SqliteSaver` |
+
+---
+
+### Core Concepts
+
+| Component | Purpose |
+|-----------|---------|
+| **State** | Shared data across all nodes |
+| **Nodes** | Individual processing functions |
+| **Edges** | Workflow routing logic |
+| **Reducers** | Define how state updates are merged |
+| **Conditional** | Route execution dynamically based on state |
+| **Loops** | Retry or self-correct until a condition is met |
+| **HITL** | Pause execution for human review or approval |
+| **Persistence** | Save and restore workflow state using checkpoints |
+| **thread_id** | Identifies a conversation/workflow instance |
+| **Checkpointer** | Persists workflow execution state |
+| **Backends** | Storage implementations such as `MemorySaver` and `SqliteSaver` |
+
