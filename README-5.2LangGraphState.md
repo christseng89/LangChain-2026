@@ -1204,7 +1204,7 @@ uv run checkpointing.py
 | **Checkpointing** | Checkpointer + `thread_id` |
 | **HITL** | `interrupt` + `update_state` + `invoke(None)` |
 | **thread_id** | Same = resume, Different = fresh |
-| **Backends** | `MemorySaver` / `SqliteSaver` |
+| **Backends** | `MemorySaver()` / `SqliteSaver` |
 
 ---
 
@@ -1224,3 +1224,4 @@ uv run checkpointing.py
 | **Checkpointer** | Persists workflow execution state |
 | **Backends** | Storage implementations such as `MemorySaver` and `SqliteSaver` |
 
+---
