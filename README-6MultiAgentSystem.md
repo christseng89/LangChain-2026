@@ -420,25 +420,18 @@ style ANSWER fill:#DC2626,color:#FFFFFF,stroke:#991B1B,stroke-width:2px
 
 ---
 
-### LangChain Architecture
+### LangChain with Tools Architecture
 
 ```mermaid
 flowchart TD
 
 APP["Application"]
-
 TOOL["Python Function<br/>@tool"]
-
 BIND["bind_tools()"]
-
 LLM["ChatOpenAI"]
-
 USER["User Question"]
-
 CALL["Tool Call"]
-
 RESULT["Tool Result"]
-
 ANSWER["Final Answer"]
 
 APP --> TOOL
@@ -497,7 +490,7 @@ cd langchain-course/
 pyenv global 3.12.10
 pyenv local 3.12.10
 
-uv run tool_calling_agent.py
+uv run agent_tool_calling.py
 ```
 
 ## Supervisor Core Responsibilities - Supervisor Pattern
@@ -562,9 +555,7 @@ The **Supervisor** is the coordinator of a Multi-Agent system. Rather than perfo
 flowchart TD
 
     USER["👤 User Request"]
-
     SUP["🧑‍💼 Supervisor"]
-
     BA["📋 Business Analyst Agent"]
     SA["🏗️ Solution Architect Agent"]
     CA["🛡️ Compliance Agent"]
@@ -620,17 +611,11 @@ style REPORT fill:#1E3A8A,color:#FFFFFF,stroke:#1E40AF,stroke-width:2px
 flowchart TD
 
     USER["👤 User Request"]
-
     U["1️⃣ Understand the Task"]
-
     B["2️⃣ Break into Subtasks"]
-
     A["3️⃣ Assign to Specialized Agents"]
-
     C["4️⃣ Collect Results"]
-
     S["5️⃣ Synthesize Results"]
-
     F["✅ Final Answer"]
 
     USER --> U
@@ -677,5 +662,106 @@ flowchart TD
 ## Hands on - Supervisor Patterns 
 
 ```bash
-uv run supervisor_agent.py 
+uv run agent_supervisor.py 
+```
+
+## Why Handoffs? - the Real-World Problem
+
+> **"Every company with a chatbot eventually encounters the same limitation — a single agent cannot handle every type of request effectively."**
+
+---
+
+### ❌ The Problem
+
+**Customer**
+
+> "I was charged twice."
+
+**Generic AI Chatbot**
+
+- Attempts to answer every question
+- Lacks specialized billing knowledge
+- May provide a vague or inaccurate response
+
+**Result**
+
+- Customer frustration
+- Longer resolution time
+- Poor customer experience
+
+---
+
+### ✅ The Solution
+
+Instead of handling every request itself, the AI first performs **triage** and then hands the conversation to the most appropriate specialist.
+
+```text
+Customer
+    │
+    ▼
+Triage Agent
+    │
+    ▼
+Billing Specialist
+    │
+    ▼
+Issue Resolved
+```
+
+**Benefits**
+
+- Faster resolution
+- Higher accuracy
+- Better customer satisfaction
+- Specialized expertise
+
+---
+
+### Routing Flow
+
+```mermaid
+flowchart TD
+
+    CUSTOMER["👤 Customer Message"]
+    TRIAGE["🎯 Triage Agent<br/>Who should handle this?"]
+    SALES["💼 Sales Agent"]
+    SUPPORT["🛠️ Support Agent"]
+    BILLING["💳 Billing Agent"]
+    CUSTOMER --> TRIAGE
+
+    TRIAGE --> SALES
+    TRIAGE --> SUPPORT
+    TRIAGE --> BILLING
+
+    style CUSTOMER fill:#2563EB,color:#FFFFFF,stroke:#1E40AF,stroke-width:2px
+    style TRIAGE fill:#7C3AED,color:#FFFFFF,stroke:#5B21B6,stroke-width:3px
+
+    style SALES fill:#16A34A,color:#FFFFFF,stroke:#14532D,stroke-width:2px
+    style SUPPORT fill:#D97706,color:#FFFFFF,stroke:#92400E,stroke-width:2px
+    style BILLING fill:#DC2626,color:#FFFFFF,stroke:#991B1B,stroke-width:2px
+```
+
+---
+
+### Typical Handoff Scenarios
+
+| Customer Request | Routed To |
+|------------------|-----------|
+| "I'd like a product demo." | Sales Agent |
+| "I forgot my password." | Support Agent |
+| "I was charged twice." | Billing Agent |
+| "I need a refund." | Billing Agent |
+| "How do I integrate your API?" | Technical Support Agent |
+
+---
+
+### Key Takeaway
+
+A **Triage Agent** determines **who should handle the request**, while **specialized agents** focus on solving domain-specific problems.
+
+## Hands On Handsoff
+
+```bash
+uv run agent_handoffs.py
+
 ```
