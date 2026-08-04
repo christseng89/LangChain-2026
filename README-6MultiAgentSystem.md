@@ -759,9 +759,120 @@ flowchart TD
 
 A **Triage Agent** determines **who should handle the request**, while **specialized agents** focus on solving domain-specific problems.
 
-## Hands On Handsoff
+## Hands On Handsoff/Parallel/Map Reduce
 
 ```bash
 uv run agent_handoffs.py
+uv run agent_parallel.py
 
+```
+
+## Three Communication Patterns
+
+> Communication patterns define **how AI agents exchange information and collaborate** within a Multi-Agent system.
+
+---
+
+| Pattern | Communication | Data Sharing | Best For | Enterprise Example | Core Idea |
+|---------|---------------|--------------|----------|--------------------|-----------|
+| 🟧 **Message Passing** | Agents exchange messages | Conversation History | Chatbots, Customer Service, ReAct Agents | Customer Support, AI Assistant | **Communicate by exchanging messages.** |
+| 🟩 **Shared State** | Agents read and update shared state | Typed Objects (State) | Business Workflows, LangGraph, Data Pipelines | Trade Finance, Loan Processing, BPM | **Collaborate by reading and updating structured data.** |
+| 🟪 **Blackboard** | Agents collaborate through a shared workspace | State + Messages + Documents | Collaborative AI Teams, Research, **Software Development** | Business Analysis, System Design, Code Review, QA | **Collaborate through a shared workspace where every agent contributes and builds on others' work.** |
+---
+
+## Reducers: The Secret Sauce of LangGraph
+
+> **Reducers determine how the shared state is updated when multiple nodes or agents write to the same state field.**
+
+Without reducers, the **last write wins**.  
+With reducers, LangGraph can intelligently **append, merge, aggregate, or customize** how state is updated.
+
+---
+
+| Reducer | Behavior | Typical Use Case | Core Idea | Think of It As |
+|---------|----------|------------------|-----------|----------------|
+| ⬛ **Default (Overwrite)** | Last write wins | Workflow status | Replace the previous value. | **覆蓋 (Replace)** |
+| 🟦 **operator.add** | Append values | Findings, Logs | Accumulate multiple values. | **累加 (Append)** |
+| 🟩 **add_messages** | **Smart** Merge messages | Chat History, ReAct | Preserve conversation history. | **聊天記錄合併 (Conversation Merge)** |
+| 🟧 **Custom Reducer** | Custom merge logic | Voting, Business Rules | Apply domain-specific merge strategies. | **依照公司規則合併 (Business Merge)** |
+---
+
+### operator.add vs add_messages
+
+| 比較項目                  | `operator.add`                   | `add_messages`                                                  |
+| --------------------- | -------------------------------- | --------------------------------------------------------------- |
+| 用途                    | 一般資料累加                           | 專門合併 Chat Message                                               |
+| 適用資料                  | List、數字等                         | `BaseMessage`（HumanMessage、AIMessage、ToolMessage、SystemMessage） |
+| 合併方式                  | Python 的 `+` 運算                  | LangGraph 的智慧合併演算法                                              |
+| 是否保留 Message **Metadata** | ❌                                | ✅                                                               |
+| 是否支援 Tool Calls       | ❌                                | ✅                                                               |
+| 是否處理 Message ID       | ❌                                | ✅                                                               |
+| 最佳用途                  | Findings、Logs、Documents、Comments | Chat History、ReAct、Multi-Agent 對話                               |
+
+@tool => agent_tool_calling.py | add_messages
+
+---
+
+### Enterprise Examples
+
+| Scenario | Recommended Reducer |
+|----------|---------------------|
+| Current workflow status | ⬛ Default |
+| AI search findings | 🟦 operator.add |
+| Multi-Agent conversation | 🟩 add_messages |
+| Credit risk score aggregation | 🟧 Custom Reducer |
+| Compliance review comments | 🟦 operator.add |
+| Business Analysis review feedback | 🟦 operator.add or 🟧 Custom Reducer |
+
+---
+
+### Custom Reducer Example
+
+#### 1. 信用狀（LC）文件審核
+
+- 審單只要有一項 High Risk, 整份交易就是 High Risk.
+- 只要有任何 Discrepancy, 不能 Auto Approve. 否則 Approve.
+
+```python
+def merge_trade_review(old, new):
+
+    merged = ...
+
+    if new["risk_level"] == "High":
+        merged["risk_level"] = "High"
+
+    merged["discrepancies"] += new["discrepancies"]
+
+    merged["approved"] = (
+        len(merged["discrepancies"]) == 0
+        and merged["risk_level"] != "High"
+    )
+
+    return merged
+```
+
+#### 2. Loan Approval
+
+4 Agents
+
+- Credit Agent
+- Fraud Agent
+- Income Agent
+- Collateral Agent
+
+> 全部同意 -> Approve, 任何一票否決 -> Reject
+
+```python
+approved = (
+    credit
+    and fraud
+    and income
+    and collateral
+)
+```
+
+## Hands on Agent Communication
+
+```bash
+uv run agent_communication.py
 ```
