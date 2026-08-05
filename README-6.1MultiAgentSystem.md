@@ -811,6 +811,11 @@ With reducers, LangGraph can intelligently **append, merge, aggregate, or custom
 
 @tool => agent_tool_calling.py | add_messages
 
+> 簡單記憶：
+
+- operator.add = List 的 +（**通用**累加器）
+- add_messages = Chat 專用 Reducer（智慧合併對話）
+
 ---
 
 ### Enterprise Examples
