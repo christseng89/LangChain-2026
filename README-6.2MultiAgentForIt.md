@@ -171,8 +171,8 @@ flowchart TD
 flowchart TD
     BR["Business Requirement</br> or Case Study"]
     GPT1["ChatGPT: Draft the FSD"]
-    CLAUDE["Claude CoWork: Review Draft or Comments and revise the FSD"]
-    GPT2["ChatGPT: Review the Revised FSD, provide comments, and Assign a score"]
+    CLAUDE["Claude CoWork - Writer: </br>Review Draft or Comments then Revise the FSD"]
+    GPT2["ChatGPT - Reviewer: </br>Review the Revised FSD then provide Comments, and Assign a score"]
     CHECK{"Score at least 9.8?"}
     FINAL["Final FSD"]
 
