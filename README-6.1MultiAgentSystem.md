@@ -881,3 +881,310 @@ approved = (
 ```bash
 uv run agent_communication.py
 ```
+
+---
+
+## Why Hierarchical?
+
+> **Hierarchical Multi-Agent architectures organize AI agents into departments, each managed by its own supervisor. This improves scalability, maintainability, and decision quality.**
+
+---
+
+| Single Supervisor | Hierarchical |
+|-------------------|--------------|
+| ❌ One supervisor manages **all** agents. | ✅ Each department has its own supervisor. |
+| ❌ Easily overwhelmed when coordinating many agents (5+ or more). | ✅ Scales naturally to dozens or even hundreds of agents. |
+| ❌ Flat routing and limited decision-making. | ✅ Multi-level reasoning and delegation. |
+| ❌ Difficult to add new capabilities without changing the entire workflow. | ✅ Add a new department without redesigning the whole system. |
+| ❌ Single bottleneck for all decisions. | ✅ Decisions are distributed across multiple supervisors. |
+| ❌ Lower fault isolation. | ✅ Failures are isolated within individual departments. |
+
+---
+
+### Comparison
+
+| Architecture | Best For |
+|--------------|----------|
+| **Single Supervisor** | Small AI assistants, simple workflows, fewer than 5 specialist agents |
+| **Hierarchical** | Enterprise systems, large organizations, complex business workflows, **software development**, smart cities |
+
+---
+
+### Key Benefits of Hierarchical Architecture
+
+- Better scalability
+- Clear separation of responsibilities
+- Easier maintenance
+- Parallel execution across departments
+- Reduced decision bottlenecks
+- Easier expansion as the organization grows
+
+---
+
+### Hierarchical Architecture Example
+
+```mermaid Global Supervisor
+flowchart LR
+
+    GS["Global Supervisor"]
+
+    DEV["1 Development Supervisor"]
+    OPS["2 Operations Supervisor"]
+    BIZ["3 Business Supervisor"]
+    CORP["4 Corporate Services Supervisor"]
+
+    GS --> DEV
+    GS --> OPS
+    GS --> BIZ
+    GS --> CORP
+
+    style GS fill:#7C3AED,color:#FFFFFF,stroke:#5B21B6,stroke-width:3px
+
+    style DEV fill:#1E3A8A,color:#FFFFFF,stroke:#1E40AF,stroke-width:2px
+    style OPS fill:#1E3A8A,color:#FFFFFF,stroke:#1E40AF,stroke-width:2px
+    style BIZ fill:#1E3A8A,color:#FFFFFF,stroke:#1E40AF,stroke-width:2px
+    style CORP fill:#1E3A8A,color:#FFFFFF,stroke:#1E40AF,stroke-width:2px
+```
+---
+
+```mermaid Development Supervisor
+flowchart LR
+
+    DEV["1 Development Supervisor"]
+
+    BA["Business Analyst Agent"]
+    ARCH["Solution Architect Agent"]
+    DEVAGENT["Developer Agent"]
+    QA["QA Agent"]
+
+    DEV --> BA
+    DEV --> ARCH
+    DEV --> DEVAGENT
+    DEV --> QA
+
+    style DEV fill:#1E3A8A,color:#FFFFFF,stroke:#1E40AF,stroke-width:3px
+
+    style BA fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+    style ARCH fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+    style DEVAGENT fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+    style QA fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+```
+---
+
+```mermaid Operations Supervisor
+flowchart LR
+
+    OPS["2 Operations Supervisor"]
+
+    SEC["Security Agent"]
+    DEVOPS["DevOps Agent"]
+    SRE["SRE Agent"]
+    MON["Monitoring Agent"]
+
+    OPS --> SEC
+    OPS --> DEVOPS
+    OPS --> SRE
+    OPS --> MON
+
+    style OPS fill:#1E3A8A,color:#FFFFFF,stroke:#1E40AF,stroke-width:3px
+
+    style SEC fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+    style DEVOPS fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+    style SRE fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+    style MON fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+```
+
+---
+
+```mermaid Business and Corporate Services Supervisor
+flowchart LR
+
+    BIZ["3 Business Supervisor</br>對外經營"]
+    CORP["4 Corporate Services Supervisor</br>企業內部共享服務"]
+
+    SALES["Sales Agent"]
+    MKT["Marketing Agent"]
+    FIN["Finance Agent"]
+    SUPPORT["Support Agent"]
+
+    HR["HR Agent"]
+    LEGAL["Legal Agent"]
+    PROC["Procurement Agent"]
+    ADMIN["Administration Agent"]
+
+    BIZ --> SALES
+    BIZ --> MKT
+    BIZ --> FIN
+    BIZ --> SUPPORT
+
+    CORP --> HR
+    CORP --> LEGAL
+    CORP --> PROC
+    CORP --> ADMIN
+
+    style BIZ fill:#1E3A8A,color:#FFFFFF,stroke:#1E40AF,stroke-width:3px
+    style CORP fill:#1E3A8A,color:#FFFFFF,stroke:#1E40AF,stroke-width:3px
+
+    style SALES fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+    style MKT fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+    style FIN fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+    style SUPPORT fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+
+    style HR fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+    style LEGAL fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+    style PROC fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+    style ADMIN fill:#4B5563,color:#FFFFFF,stroke:#374151,stroke-width:2px
+```
+---
+
+## Subgraphs: The Building Block
+
+> **A Subgraph is a self-contained workflow that can be compiled independently and embedded as a single node within a parent graph.**
+
+---
+
+### Why Use Subgraphs?
+
+| Capability | Description | Benefit |
+|------------|-------------|---------|
+| **Own StateGraph** | Each department has its own `StateGraph` and internal routing logic. | **Self-contained logic** |
+| **Single Node Integration** | A compiled subgraph can be added to the parent graph as a single node. | **Clean integration** |
+| **Shared State** | Parent and subgraphs exchange data through overlapping state keys. | **Natural data flow** |
+| **Independent Testing** | Each subgraph can be developed, tested, and debugged independently. | **Debug in isolation** |
+
+---
+
+### Key Characteristics
+
+- Self-contained workflow
+- Independent StateGraph
+- Independent routing
+- Reusable component
+- Easy to test
+- Easy to maintain
+- Easy to scale
+
+---
+
+### Typical Use Cases
+
+| Subgraph | Responsibility |
+|-----------|----------------|
+| Development | Requirement Analysis, Design, Coding, QA |
+| Operations | Security, DevOps, Monitoring |
+| Business | Sales, Marketing, Customer Support |
+| Corporate Services | HR, Legal, Procurement, Administration |
+
+---
+
+### Key Takeaway
+
+A **Subgraph** behaves like a **department** within an organization.
+
+- The **Parent Graph** acts as the enterprise coordinator.
+- Each **Subgraph** manages its own internal workflow.
+- The **Parent Graph** only needs to know **when** to invoke the subgraph—not **how** it works internally.
+
+---
+
+```mermaid
+flowchart TD
+
+    PARENT["Parent Graph"]
+
+    DEV["Development Subgraph"]
+
+    OPS["Operations Subgraph"]
+
+    BIZ["Business Subgraph"]
+
+    PARENT --> DEV
+    PARENT --> OPS
+    PARENT --> BIZ
+
+    DEV --> DEVSTATE["Own StateGraph"]
+    DEV --> DEVROUTE["Internal Routing"]
+
+    OPS --> OPSSTATE["Own StateGraph"]
+    OPS --> OPSROUTE["Internal Routing"]
+
+    BIZ --> BIZSTATE["Own StateGraph"]
+    BIZ --> BIZROUTE["Internal Routing"]
+
+    style PARENT fill:#7C3AED,color:#FFFFFF
+
+    style DEV fill:#2563EB,color:#FFFFFF
+    style OPS fill:#16A34A,color:#FFFFFF
+    style BIZ fill:#D97706,color:#FFFFFF
+
+    style DEVSTATE fill:#4B5563,color:#FFFFFF
+    style DEVROUTE fill:#4B5563,color:#FFFFFF
+
+    style OPSSTATE fill:#4B5563,color:#FFFFFF
+    style OPSROUTE fill:#4B5563,color:#FFFFFF
+
+    style BIZSTATE fill:#4B5563,color:#FFFFFF
+    style BIZROUTE fill:#4B5563,color:#FFFFFF
+```
+
+---
+
+## Hands on Hierarchical Architecture
+
+
+```mermaid
+flowchart TD
+
+    CEO["CEO Supervisor<br/><sub>Top-Level Router</sub>"]
+
+    RES["Research<br/>Department<br/><sub>Sub-Sup.</sub>"]
+    CON["Content<br/>Department<br/><sub>Sub-Sup.</sub>"]
+    ANA["Analytics<br/>Department<br/><sub>Sub-Sup.</sub>"]
+
+    CEO --> RES
+    CEO --> CON
+    CEO --> ANA
+
+    WEB["Web<br/>Search"]
+    PAPER["Paper<br/>Review"]
+
+    WRITER["Writer"]
+    EDITOR["Editor"]
+
+    DATA["Data<br/>Query"]
+    VIZ["Viz<br/>Agent"]
+
+    RES --> WEB
+    RES --> PAPER
+
+    CON --> WRITER
+    CON --> EDITOR
+
+    ANA --> DATA
+    ANA --> VIZ
+
+    %% Styles
+    style CEO fill:#8B73A6,color:#FFFFFF,stroke:#6D5B8C,stroke-width:2px
+
+    style RES fill:#5F88B0,color:#FFFFFF
+    style CON fill:#5B9672,color:#FFFFFF
+    style ANA fill:#C18A59,color:#FFFFFF
+
+    style WEB fill:#777777,color:#FFFFFF
+    style PAPER fill:#777777,color:#FFFFFF
+    style WRITER fill:#777777,color:#FFFFFF
+    style EDITOR fill:#777777,color:#FFFFFF
+    style DATA fill:#777777,color:#FFFFFF
+    style VIZ fill:#777777,color:#FFFFFF
+
+  
+```
+
+> Each level manages its own scope: 
+
+- CEO routes to departments
+- Departments route to specialists
+
+```bash
+uv run agent_hierarchical.py
+```
