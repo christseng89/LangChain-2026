@@ -1188,3 +1188,41 @@ flowchart TD
 ```bash
 uv run agent_hierarchical.py
 ```
+
+- StateGraph只是一个构建图的类(builder class)——在每一层你得到的都是它的独立实例：parent(CEO)图一个,research 团队一个,content 团队一个,analysis 团队一个。每次调用 StateGraph(TeamState) 都会创建一个全新、互相独立的图对象。
+- TeamState(包含 messages 和 final_answer 的 TypedDict)才是这四个 StateGraph 实例共同使用的状态模式(schema)。这才是真正被共享的东西
+
+> add_node 加进去的是一个已编译的、独立的子图(compiled StateGraph),而不是未编译的 StateGraph 本身。
+
+- build_research_team().compile()
+- build_content_team().compile()
+- build_analysis_team.compile()
+
+```python
+# 就是把 CEO 節點和三個已編譯好的部門子圖,組成一個完整的 hierarchical 系統。
+parent = StateGraph(TeamState)
+
+parent.add_node("ceo", ceo_supervisor)
+parent.add_node("research_team", research_team)  # compiled subgraph
+parent.add_node("content_team", content_team)  # compiled subgraph
+parent.add_node("analysis_team", analysis_team)  # compiled subgraph
+
+parent.add_edge(START, "ceo")
+parent.add_conditional_edges(
+"ceo",
+route_to_department,
+{
+    "research_team": "research_team",
+    "content_team": "content_team",
+    "analysis_team": "analysis_team",
+},
+)
+
+parent.add_edge("research_team", END)
+parent.add_edge("content_team", END)
+parent.add_edge("analysis_team", END)
+
+app = parent.compile()
+save_graph_png(app, "graphL2.0_hs_ceo_route_to_department.png")
+return app
+```
