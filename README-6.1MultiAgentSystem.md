@@ -1226,3 +1226,196 @@ app = parent.compile()
 save_graph_png(app, "graphL2.0_hs_ceo_route_to_department.png")
 return app
 ```
+---
+
+## Sections Project - Multi Agents Research System
+
+```mermaid
+flowchart TD
+    User["👤 <b>User</b><br/>Research topic and produce a report"]
+
+    Supervisor["🎯 <b>Supervisor</b><br/><i>Plans research and coordinates agents</i>"]
+
+    subgraph Parallel["🔍 Parallel Web Research"]
+        direction LR
+        Search1["🔎 Search Agent 1"]
+        Search2["🔎 Search Agent 2"]
+    end
+
+    Analyst["📊 <b>Analyst</b><br/><i>Synthesizes findings</i>"]
+    Writer["✍️ <b>Report Writer</b><br/><i>Produces structured report</i>"]
+    Quality["✅ <b>Quality Check</b><br/><i>Reviews and scores</i>"]
+    Final["📄 Final Report"]
+
+    User --> Supervisor
+    Supervisor --> Search1
+    Supervisor --> Search2
+
+    Search1 --> Analyst
+    Search2 --> Analyst
+
+    Analyst --> Writer
+    Writer --> Quality
+    Quality --> Final
+
+    %% Color Definitions
+    classDef user fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1
+    classDef supervisor fill:#FFF3E0,stroke:#EF6C00,stroke-width:3px,color:#E65100
+    classDef search fill:#E8EAF6,stroke:#3949AB,stroke-width:2px,color:#1A237E
+    classDef analyst fill:#E0F2F1,stroke:#00897B,stroke-width:2px,color:#004D40
+    classDef writer fill:#F3E5F5,stroke:#8E24AA,stroke-width:2px,color:#4A148C
+    classDef quality fill:#FFF8E1,stroke:#F9A825,stroke-width:2px,color:#F57F17
+    classDef final fill:#E8F5E9,stroke:#2E7D32,stroke-width:3px,color:#1B5E20
+
+    %% Apply Colors
+    class User user
+    class Supervisor supervisor
+    class Search1,Search2 search
+    class Analyst analyst
+    class Writer writer
+    class Quality quality
+    class Final final
+
+    %% Subgraph Styling
+    style Parallel fill:#F8F9FA,stroke:#7986CB,stroke-width:2px,stroke-dasharray:5 5
+```
+
+
+
+### State Design
+
+> ResearchState
+
+```python
+class ResearchState(TypedDict):
+    messages: ...              # Agent conversation
+    topic: str                 # What to research
+    search_queries: list       # Planned by supervisor
+    findings: list[dict]       # Collected by search agents
+    analysis: str              # Written by analyst
+    report: str                # Written by report writer
+    quality_score: float       # Scored by quality checker
+    quality_feedback: str      # Feedback for improvement
+    iteration: int             # Track revision cycles
+```
+
+---
+
+## Patterns Combined
+
+> agent_multi_agents_system.py
+
+*This project brings together EVERYTHING from Section 4:*
+
+| Concept | Where It's Used | Method(s) |
+|---------|-----------------|-----------|
+| Tool-calling agents  | Search agents use web search tools | `search_agent()` |
+| Supervisor architecture  | Supervisor plans and delegates | `supervisor()` |
+| Agent handoffs  | Context flows between phases | `report_writer()` |
+| Parallel execution  | Search agents work simultaneously | `dispatch_searches()` |
+| Shared state / blackboard  | All findings on shared state | `ResearchState`, `analyst()` |
+| Hierarchical structure  | Supervisor > team > specialists | `create_research_system()` |
+
+---
+
+## Hands on Multi-Agents System
+
+```bash
+uv run agent_multi_agents_system.py
+```
+
+### LangGraph Send API — Static vs Dynamic Fan-Out
+
+1. Static Fan-Out ❌
+
+    - START connects to a fixed set of nodes: research agent, creative agent, technical agent.
+    - The edges are hardcoded at graph.add_edge().
+    - The count of branches can never change — "these were actually hard coded."
+
+```mermaid
+flowchart TB
+
+    START([START])
+
+    START --> RA[Research Agent]
+    START --> CA[Creative Agent]
+    START --> TA[Technical Agent]
+
+    %% Colors
+    style START fill:#1565C0,color:#FFFFFF,stroke:#0D47A1,stroke-width:2px
+
+    style RA fill:#E3F2FD,color:#0D47A1,stroke:#1976D2,stroke-width:2px
+    style CA fill:#E3F2FD,color:#0D47A1,stroke:#1976D2,stroke-width:2px
+    style TA fill:#E3F2FD,color:#0D47A1,stroke:#1976D2,stroke-width:2px
+
+    style NOTE fill:#FFEBEE,color:#B71C1C,stroke:#D32F2F,stroke-width:2px
+```
+
+2. Dynamic Fan-Out — Send API ✅
+
+    - A Supervisor node decides at runtime: 2, 3, or 5 searches?
+    - It routes through dispatch_searches(), which returns list[Send].
+    - This spins up N instances of the same search_agent node — search_agent (#1), search_agent (#2), search_agent (#3), … — each with its own state (search_query, findings: []).
+    - An automatic barrier waits for ALL search agents to finish before continuing.
+Results converge into a single analyst node.
+
+
+```mermaid
+flowchart TB
+
+    SUP([Supervisor])
+
+    SUP -->|"Decides at runtime:<br/>2, 3, or 5 searches?"| DISP["dispatch_searches()"]
+
+    DISP -->|"returns list[Send]"| SA1["Search Agent #1<br/>State:<br/>search_query #1<br/>findings: []"]
+
+    DISP --> SA2["Search Agent #2<br/>State:<br/>search_query #2<br/>findings: []"]
+
+    DISP --> SA3["Search Agent #3<br/>State:<br/>search_query #3<br/>findings: []"]
+
+    SA1 --> BARRIER["Automatic Barrier<br/>Wait for ALL Search Agents"]
+    SA2 --> BARRIER
+    SA3 --> BARRIER
+
+    BARRIER --> AN([Analyst])
+
+    %% Colors
+    style SUP fill:#1565C0,color:#FFFFFF,stroke:#0D47A1,stroke-width:2px
+
+    style DISP fill:#2E7D32,color:#FFFFFF,stroke:#1B5E20,stroke-width:3px
+
+    style SA1 fill:#E8F5E9,color:#1B5E20,stroke:#43A047,stroke-width:2px
+    style SA2 fill:#E8F5E9,color:#1B5E20,stroke:#43A047,stroke-width:2px
+    style SA3 fill:#E8F5E9,color:#1B5E20,stroke:#43A047,stroke-width:2px
+
+    style BARRIER fill:#FFF3E0,color:#E65100,stroke:#FB8C00,stroke-width:2px
+
+    style AN fill:#7B1FA2,color:#FFFFFF,stroke:#4A148C,stroke-width:2px
+```
+
+---
+
+## `demo_research_with_stream()` vs `demo_research_with_invoke()`
+
+| 比較項目                     | `demo_research_with_stream()`                                                                                                                                                 | `demo_research_with_invoke()`                                                                     |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| **執行方式**                 | `system.stream(initial_state, stream_mode="updates")` — 逐步取得每個節點的更新                                                                                                              | `system.invoke(initial_state)` — 阻塞直到整個 graph 跑完                                           |
+| **拿到的資料**                | 每次迴圈只拿到**該節點自己回傳的部分更新**（partial update），迴圈結束後不保留完整結果                                                                                                                             | 拿到**完整的最終 state**（`result`），可存取 `messages`、`findings`、`quality_score`、`iteration`、`report` |
+| **已知問題**                 | `results` 變數只在更新包含 `search_queries` / `findings` / `report` 時才重新賦值；`analyst` 節點的更新沒有這些欄位，導致印出的是**上一個 `search_agent` 殘留的舊資料**，而不是 `analyst` 真正的輸出                                 | 沒有這個問題，直接讀取乾淨的最終 state                                                                     |
+| **Graph 結構 / Node 執行邏輯** | 相同。都呼叫 `create_research_system()`；節點順序、`dispatch_searches()` 的並行 fan-out、`quality_gate()` 的路由邏輯完全一樣                                                                              | 相同                                                                                         |
+| **每次執行結果是否完全一致**         | **不保證**。即使用同一個 topic 重跑兩次也可能不同                                                                                                                                                   | 同左                                                                                         |
+| **造成不一致的原因**             | ① `report_writer` 使用 `temperature=0.7`，本身具有隨機性<br>② `quality_checker` 的評分來自 LLM，可能導致 revision 迴圈次數不同，例如跑 1 次就通過，或跑到 `MAX_ITERATIONS`<br>③ 即使 `temperature=0`，OpenAI 也不保證跨次呼叫完全一致 | 原因相同，因為使用的是同一套 graph                                                                       |
+| **使用的 Topic（目前程式碼）**     | `"Best practices for building multi-agent AI systems. Response in Chinese."`                                                                                                     | `"The impact of AI agents on software development in 2026. Response in Chinese."`          |
+| **儲存的 Graph 圖檔**         | `graphM1_research.png`                                                                                                                                                           | `graphM2_multi_agents.png`                                                                 |
+| **適合用途**                 | 想即時觀察每個 Agent 執行到哪裡、每一步產出什麼，適合 **Debug / 教學展示**                                                                                                                                  | 想取得最終完整結果做後續處理，適合 **正式使用 / 系統整合**                                                          |
+
+---
+
+> invoke() 的「阻塞」是指呼叫 Graph 的程式在等待最終結果，不是說 Graph 內部不能 Parallel。 Graph 內部仍然可以：
+
+              ┌→ Search Agent 1 ─┐
+Supervisor ───┼→ Search Agent 2 ─┼→ Analyst
+              └→ Search Agent 3 ─┘
+                   Parallel
+
+---
