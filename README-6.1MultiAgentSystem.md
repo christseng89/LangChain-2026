@@ -1419,3 +1419,201 @@ Supervisor ───┼→ Search Agent 2 ─┼→ Analyst
                    Parallel
 
 ---
+
+### Send API
+
+```mermaid
+flowchart TD
+    P["🧠 Planner"]
+    G["📋 Generate Research Tasks"]
+    S["📤 Send()"]
+
+    R1["🔍 R1<br/>Researcher 1<br/>Task 1"]
+    R2["🔍 R2<br/>Researcher 2<br/>Task 2"]
+    R3["🔍 R3<br/>Researcher 3<br/>Task 3"]
+    R4["🔍 R4<br/>Researcher 4<br/>Task 4"]
+
+    A["📊 Analyst"]
+    V["✓ Reviewer"]
+    F["📄 Final Report"]
+
+    P --> G
+    G --> S
+
+    S --> R1
+    S --> R2
+    S --> R3
+    S --> R4
+
+    R1 --> A
+    R2 --> A
+    R3 --> A
+    R4 --> A
+
+    A --> V
+    V --> F
+
+    %% ===== PLANNER =====
+    style P fill:#064E3B,stroke:#34D399,stroke-width:3px,color:#FFFFFF
+
+    %% ===== TASK GENERATION =====
+    style G fill:#422006,stroke:#FBBF24,stroke-width:3px,color:#FFFFFF
+
+    %% ===== SEND / DYNAMIC DISPATCH =====
+    style S fill:#312E81,stroke:#A5B4FC,stroke-width:3px,color:#FFFFFF
+
+    %% ===== PARALLEL RESEARCH AGENTS =====
+    style R1 fill:#172554,stroke:#60A5FA,stroke-width:3px,color:#FFFFFF
+    style R2 fill:#172554,stroke:#60A5FA,stroke-width:3px,color:#FFFFFF
+    style R3 fill:#172554,stroke:#60A5FA,stroke-width:3px,color:#FFFFFF
+    style R4 fill:#172554,stroke:#60A5FA,stroke-width:3px,color:#FFFFFF
+
+    %% ===== ANALYST / FAN-IN =====
+    style A fill:#164E63,stroke:#22D3EE,stroke-width:3px,color:#FFFFFF
+
+    %% ===== REVIEWER =====
+    style V fill:#701A75,stroke:#E879F9,stroke-width:3px,color:#FFFFFF
+
+    %% ===== FINAL REPORT =====
+    style F fill:#14532D,stroke:#4ADE80,stroke-width:3px,color:#FFFFFF
+```
+
+### ReAct (Reasoning Action)
+
+```mermaid
+flowchart TD
+    S["📤 Send()"]
+
+    S --> R1
+    S --> R2
+    S --> R3
+    S --> R4
+
+    subgraph R1["🔍 Research Agent 1"]
+        direction TB
+        R1R["🧠 Reason"]
+        R1A["⚙️ Act"]
+        R1O["👁 Observe"]
+        R1R --> R1A --> R1O
+        R1O -. "↺ ReAct Loop" .-> R1R
+    end
+
+    subgraph R2["🔍 Research Agent 2"]
+        direction TB
+        R2R["🧠 Reason"]
+        R2A["⚙️ Act"]
+        R2O["👁 Observe"]
+        R2R --> R2A --> R2O
+        R2O -. "↺ ReAct Loop" .-> R2R
+    end
+
+    subgraph R3["🔍 Research Agent 3"]
+        direction TB
+        R3R["🧠 Reason"]
+        R3A["⚙️ Act"]
+        R3O["👁 Observe"]
+        R3R --> R3A --> R3O
+        R3O -. "↺ ReAct Loop" .-> R3R
+    end
+
+    subgraph R4["🔍 Research Agent 4"]
+        direction TB
+        R4R["🧠 Reason"]
+        R4A["⚙️ Act"]
+        R4O["👁 Observe"]
+        R4R --> R4A --> R4O
+        R4O -. "↺ ReAct Loop" .-> R4R
+    end
+
+    R1 --> AN["📊 Analyst"]
+    R2 --> AN
+    R3 --> AN
+    R4 --> AN
+
+    %% ===== SEND =====
+    style S fill:#4C1D95,stroke:#C4B5FD,stroke-width:3px,color:#FFFFFF
+
+    %% ===== REASON =====
+    style R1R fill:#713F12,stroke:#FACC15,stroke-width:2px,color:#FFFFFF
+    style R2R fill:#713F12,stroke:#FACC15,stroke-width:2px,color:#FFFFFF
+    style R3R fill:#713F12,stroke:#FACC15,stroke-width:2px,color:#FFFFFF
+    style R4R fill:#713F12,stroke:#FACC15,stroke-width:2px,color:#FFFFFF
+
+    %% ===== ACT =====
+    style R1A fill:#831843,stroke:#F472B6,stroke-width:2px,color:#FFFFFF
+    style R2A fill:#831843,stroke:#F472B6,stroke-width:2px,color:#FFFFFF
+    style R3A fill:#831843,stroke:#F472B6,stroke-width:2px,color:#FFFFFF
+    style R4A fill:#831843,stroke:#F472B6,stroke-width:2px,color:#FFFFFF
+
+    %% ===== OBSERVE =====
+    style R1O fill:#14532D,stroke:#4ADE80,stroke-width:2px,color:#FFFFFF
+    style R2O fill:#14532D,stroke:#4ADE80,stroke-width:2px,color:#FFFFFF
+    style R3O fill:#14532D,stroke:#4ADE80,stroke-width:2px,color:#FFFFFF
+    style R4O fill:#14532D,stroke:#4ADE80,stroke-width:2px,color:#FFFFFF
+
+    %% ===== AGENT CONTAINERS =====
+    style R1 fill:#172033,stroke:#60A5FA,stroke-width:3px,color:#FFFFFF
+    style R2 fill:#172033,stroke:#60A5FA,stroke-width:3px,color:#FFFFFF
+    style R3 fill:#172033,stroke:#60A5FA,stroke-width:3px,color:#FFFFFF
+    style R4 fill:#172033,stroke:#60A5FA,stroke-width:3px,color:#FFFFFF
+
+    %% ===== ANALYST =====
+    style AN fill:#7C2D12,stroke:#FB923C,stroke-width:3px,color:#FFFFFF
+```
+
+### Supervisor Pattern
+
+```mermaid
+flowchart TD
+    Q["❓ Business Question"]
+    S["🧠 Supervisor<br/>理解問題 • 拆分 • 分派"]
+
+    D1["💻 IT Department<br/>Technical Feasibility"]
+    D2["💰 Finance Department<br/>Cost / ROI"]
+    D3["⚖️ Legal Department<br/>Legal / Compliance"]
+    D4["📈 Marketing Department<br/>Market Analysis"]
+
+    R1["Technical Findings"]
+    R2["Financial Findings"]
+    R3["Legal Findings"]
+    R4["Market Findings"]
+
+    A["📊 Supervisor<br/>Aggregate & Analyze"]
+    F["📄 Final Recommendation"]
+
+    Q --> S
+
+    S -->|"Technical"| D1
+    S -->|"Financial"| D2
+    S -->|"Legal"| D3
+    S -->|"Market"| D4
+
+    D1 --> R1
+    D2 --> R2
+    D3 --> R3
+    D4 --> R4
+
+    R1 --> A
+    R2 --> A
+    R3 --> A
+    R4 --> A
+
+    A --> F
+
+    style Q fill:#1F2937,stroke:#94A3B8,stroke-width:2px,color:#FFFFFF
+    style S fill:#312E81,stroke:#A5B4FC,stroke-width:3px,color:#FFFFFF
+
+    style D1 fill:#172554,stroke:#60A5FA,stroke-width:3px,color:#FFFFFF
+    style D2 fill:#172554,stroke:#60A5FA,stroke-width:3px,color:#FFFFFF
+    style D3 fill:#172554,stroke:#60A5FA,stroke-width:3px,color:#FFFFFF
+    style D4 fill:#172554,stroke:#60A5FA,stroke-width:3px,color:#FFFFFF
+
+    style R1 fill:#064E3B,stroke:#34D399,stroke-width:2px,color:#FFFFFF
+    style R2 fill:#064E3B,stroke:#34D399,stroke-width:2px,color:#FFFFFF
+    style R3 fill:#064E3B,stroke:#34D399,stroke-width:2px,color:#FFFFFF
+    style R4 fill:#064E3B,stroke:#34D399,stroke-width:2px,color:#FFFFFF
+
+    style A fill:#164E63,stroke:#22D3EE,stroke-width:3px,color:#FFFFFF
+    style F fill:#14532D,stroke:#4ADE80,stroke-width:3px,color:#FFFFFF
+
+```
