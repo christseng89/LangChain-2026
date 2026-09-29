@@ -1908,8 +1908,3 @@ https://smith.langchain.com/
 
 ---
 
-# LLM Testing Patterns
-
-```bash
-uv run testing_patterns.py 
-```
