@@ -428,3 +428,106 @@ uv run testing_patterns2_prodDataset.py
 核心概念就是：**越往下越便宜、越快、越頻繁；越往上越接近真實 LLM 品質驗證，但成本較高、執行頻率較低。**
 
 ---
+
+## Production Error Scenarios
+
+| Error Type    | Cause             | Impact              |
+|---------------|-------------------|---------------------|
+| API Timeout   | Network issues    | User wait, retry    |
+| Rate Limit    | Too many requests | Queue, backoff      |
+| Token Limit   | Input too long    | Truncate, summarize |
+| Model Error   | API issues        | Fallback model      |
+| Parse Error   | Bad output        | Retry, default      |
+
+---
+
+## Exponential Backoff Retry Strategy
+
+| Attempt | Wait Time |
+|---|---:|
+| 1🟩 **Attempt 1** | **1s** |
+| 2🟨 **Attempt 2** | **2s** |
+| 3🟧 **Attempt 3** | **4s** |
+| 4🟥 **Attempt 4** | **8s (max)** |
+
+> Each retry waits twice as long: 1s -> 2s -> 4s -> 8s (max)
+
+---
+
+# Fallback Chain
+
+> If primary fails, try secondary. If all fail, serve cached response.
+
+## LLM Fallback Chain
+
+```mermaid
+flowchart TD
+    A["🟦 Primary<br/>(GPT-4o)"]
+    B["🟪 Secondary<br/>(Claude)"]
+    C["🟧 Tertiary<br/>(GPT-4o-mini)"]
+    D["🟩 Cached<br/>Response"]
+
+    A -->|fail| B
+    B -->|fail| C
+    C -->|fail| D
+
+    style A fill:#3B82F6,color:#ffffff,stroke:#1F2937,stroke-width:2px
+    style B fill:#7E57C2,color:#ffffff,stroke:#1F2937,stroke-width:2px
+    style C fill:#F97316,color:#ffffff,stroke:#1F2937,stroke-width:2px
+    style D fill:#43A047,color:#ffffff,stroke:#1F2937,stroke-width:2px
+```
+
+---
+
+## Hands on Error Handling
+
+```bash
+uv run error_handling.py
+uv run py -m pytest tests/test_robust_agent.py -v
+```
+
+`demo_robust_agent()` 是這個檔案最後一個示範,展示如何把錯誤處理和重試**直接建在 LangGraph 的圖結構裡**,而不是像前面幾個示範那樣寫在函式或類別裡。
+
+前面三個示範各自展示一種獨立的模式:
+
+| 示範 | 模式 |
+|---|---|
+| `demo_retry_pattern` | 用裝飾器做**指數退避**重試 |
+| `demo_circuit_breaker` | 失敗太多就暫時斷路 |
+| `demo_fallback_chain` | 一個模型失敗就換下一個 |
+| **`demo_robust_agent`** | **用圖的節點和條件邊來做重試與錯誤處理** |
+
+它的運作方式([error_handling.py:286-345](langchain-course/error_handling.py#L286-L345)):
+
+1. `process` 節點:有 30% 機率丟出模擬錯誤(前提是 `retry_count < 2`),否則呼叫 LLM。失敗時不丟例外,而是把 `error` 和加 1 的 `retry_count` 寫進 state。
+2. `should_continue` 條件邊:根據 state 決定下一步。
+   - 成功 → `finalize` → 結束。
+   - 失敗但 `retry_count < max_retries` → 回到 `process` 重試(圖裡的循環就是重試機制)。
+   - 重試用完 → `handle_error` → 回傳道歉訊息 → 結束。
+3. demo 跑 3 次,每次印出是否成功、用了幾次重試、以及回應內容。
+
+重點是:**重試是圖的拓撲決定的**,`process` 節點自己不迴圈。這和你專案 CLAUDE.md 裡 `langchain-production-api` 的做法一致(`max_retries=0`,靠圖來重試)。好處是每次重試都是圖上的一個步驟,可以被 checkpoint、追蹤和視覺化。
+
+因為模擬失敗只在 `retry_count < 2` 時才會發生,所以這個 demo 幾乎一定會成功,「重試用完」的 `handle_error` 分支通常走不到。要看到那條路徑,可以把失敗條件拿掉,或把失敗機率調高。
+
+---
+
+## demo_robust_agent()
+
+- `RobustState` 新增 `simulated_failures` 欄位，表示這次要模擬失敗幾次。
+- `process_with_retry` 改成 `retry_count < simulated_failures` 就失敗，不再用 `random`，每次結果都一樣。
+- `demo_robust_agent` 改成跑三個情境。
+
+**實際執行結果**
+
+| 情境 | simulated_failures | Retries used | 路徑 |
+|---|---|---|---|
+| 1 | 0 | 0 | 直接 `finalize`，✅ |
+| 2 | 2 | 2 | retry 兩次後 `finalize`，✅ |
+| 3 | 3 | 3 | retry 用完後走 `handle_error`，❌ |
+
+情境 3 印出 `❌ Failed`，是因為 `handle_error` 沒有把 `success` 設為 `True`，屬於預期行為。
+
+`random` 在檔案的其他 demo 裡還有用到，所以我沒有移除 import。
+
+---
