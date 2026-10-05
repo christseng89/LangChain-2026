@@ -531,3 +531,31 @@ uv run py -m pytest tests/test_robust_agent.py -v
 `random` 在檔案的其他 demo 裡還有用到，所以我沒有移除 import。
 
 ---
+
+# Cost Optimization Strategies
+
+*Source: Production AI Agents with LangChain + LangGraph — Lecture 143, "Hands-on: Cost Reduction - Model Router"*
+
+- **Model Routing**: Use cheap models for simple tasks
+- **Caching**: Don't pay twice for the same query
+- **Token Budgeting**: Set limits per request/user
+- **Prompt Optimization**: Shorter prompts = lower costs
+
+---
+
+# LLM Cost Breakdown
+
+*Source: Production AI Agents with LangChain + LangGraph — Lecture 143, "Hands-on: Cost Reduction - Model Router"*
+
+> Output tokens cost 4–5x more than input tokens.
+
+| Model         | Input (per 1M tokens) | Output (per 1M tokens) |
+|---------------|----------------------:|-----------------------:|
+| GPT-4o        | $2.50                 | $10.00                 |
+| GPT-4o-mini   | $0.15                 | $0.60                  |
+| Claude Sonnet | $3.00                 | $15.00                 |
+| Claude Haiku  | $0.25                 | $1.25                  |
+
+> Opus 5.5 is $4 / $20. The top tier, Fable 5.1, is $10 / $50.
+
+---
