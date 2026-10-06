@@ -559,3 +559,9 @@ uv run py -m pytest tests/test_robust_agent.py -v
 > Opus 5.5 is $4 / $20. The top tier, Fable 5.1, is $10 / $50.
 
 ---
+
+## Hands on Cost Optimation
+
+```bash
+uv run cost_optimization.py
+```
