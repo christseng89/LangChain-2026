@@ -23,6 +23,7 @@ from slowapi.util import get_remote_address
 
 from app.agent import ProductionAgent
 from app.cache import ResponseCache
+from app.common import print_section
 from app.config import get_settings
 from app.models import (
     ChatRequest,
@@ -34,6 +35,7 @@ from app.monitoring import MetricsCollector, RequestTimer, get_logger
 from app.security import SecurityPipeline
 
 load_dotenv()
+print_section("Starting Production API")
 
 
 # === Global instances (initialized in lifespan) ===
@@ -45,8 +47,6 @@ logger = get_logger()
 
 
 # === Lifespan (startup/shutdown) ===
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -56,7 +56,6 @@ async def lifespan(app: FastAPI):
     global security, cache, metrics, agent
 
     settings = get_settings()
-
     logger.info(
         "Starting production API...",
         extra={
@@ -79,11 +78,11 @@ async def lifespan(app: FastAPI):
     yield  # App is running
 
     # Shutdown
+    print_section("Shutting down Production API")
     logger.info("Shutting down...", extra={"extra_data": metrics.summary})
 
-    # === Rate Limiter Setup ===
 
-
+# === Rate Limiter Setup ===
 limiter = Limiter(key_func=get_remote_address)
 
 # === FastAPI App ===

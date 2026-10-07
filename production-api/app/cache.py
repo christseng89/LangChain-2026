@@ -8,6 +8,7 @@ import time
 from typing import Optional
 
 
+# === Response Cache ===
 class ResponseCache:
     """
     In-memory response cache with TTL (time-to-live).

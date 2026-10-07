@@ -12,11 +12,11 @@ from langgraph.graph.message import add_messages
 from langsmith import traceable
 from typing_extensions import Annotated, TypedDict
 
+from app.common import print_llm_info
 from app.config import get_settings
 
+
 # === Agent State ===
-
-
 class AgentState(TypedDict):
     """
     State for the production agent.
@@ -30,8 +30,6 @@ class AgentState(TypedDict):
 
 
 # === Agent Builder ===
-
-
 class ProductionAgent:
     """
     Production LangGraph agent with:
@@ -43,6 +41,7 @@ class ProductionAgent:
     def __init__(self):
         settings = get_settings()
 
+        # Primary LLM
         self.primary_llm = ChatOpenAI(
             model=settings.primary_model,
             temperature=0,
@@ -50,6 +49,9 @@ class ProductionAgent:
             max_retries=0,  # We handle retries ourselves
             api_key=settings.openai_api_key,
         )
+        print_llm_info(self.primary_llm)
+
+        # Fallback LLM
         self.fallback_llm = ChatOpenAI(
             model=settings.fallback_model,
             temperature=0,
@@ -57,6 +59,8 @@ class ProductionAgent:
             max_retries=0,
             api_key=settings.openai_api_key,
         )
+        print_llm_info(self.fallback_llm)
+
         self.max_retries = settings.max_retries
         self.graph = self._build_graph()
 

@@ -78,6 +78,19 @@ bash Production-test-commands.sh
 
 uv run python main.py
 uv run pytest tests/ -v
+
+uv run python -m uvicorn app.main:app --reload --port 8000
 ```
 
 ---
+
+# Production API codes in app folder
+
+- config.py
+- models.py
+- agent.py
+- security.py
+- cache.py
+- monitoring.py
+- common.py
+- main.py

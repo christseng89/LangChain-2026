@@ -1,11 +1,11 @@
 import time
 
 from app.cache import ResponseCache
+from app.common import print_section
 
-cache = ResponseCache(ttl_seconds=3)  # Short TTL for demo
+cache = ResponseCache(ttl_seconds=3)  # Short TTL (Time To Live) for demo
 
-print("=== CACHE DEMO ===")
-print()
+print_section("CACHE DEMO")
 
 # Miss
 result = cache.get("What is Python?")
@@ -35,5 +35,8 @@ print("7. Waiting 4 seconds for TTL expiration...")
 time.sleep(4)
 
 result = cache.get("What is Python?")
-print(f"8. After TTL: {result}  (miss - expired!)")
+status = (
+    "miss - expired!" if result is None else "HIT - still cached (TTL not expired?)"
+)
+print(f"8. After TTL: {result}  ({status})")
 print(f"9. Final stats: {cache.stats}")
