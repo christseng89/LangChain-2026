@@ -23,7 +23,7 @@ source .venv/Scripts/activate   # Windows Git Bash / PowerShell: .venv\Scripts\a
 uv pip install -r requirements.txt
 ```
 
-Requires a `.env` file with `OPENAI_API_KEY` and optionally `ANTHROPIC_API_KEY` and LangSmith keys (`LANGCHAIN_API_KEY`, `LANGCHAIN_TRACING_V2`).
+Requires a `.env` file with `OPENAI_API_KEY` and optionally `ANTHROPIC_API_KEY` and LangSmith keys (`LANGSMITH_API_KEY`, `LANGSMITH_TRACING`).
 
 ### Running scripts
 
@@ -54,7 +54,7 @@ The scripts progress from basics to advanced:
 
 ```bash
 cd langchain-production-api
-cp .env.example .env   # fill in OPENAI_API_KEY and LANGCHAIN_API_KEY
+cp .env.example .env   # fill in OPENAI_API_KEY and LANGSMITH_API_KEY
 uv sync
 ```
 
@@ -95,7 +95,7 @@ Request → SecurityPipeline → ResponseCache → ProductionAgent (LangGraph) �
 
 **`app/config.py`** — pydantic-settings `Settings` class, loaded once via `@lru_cache`. All configuration comes from environment variables; `get_settings()` is the single access point.
 
-**`app/security.py`** — `SecurityPipeline` composes `InputSanitizer` (prompt injection detection) + `PIIDetector` (masking emails, phones, SSNs, card numbers) + `OutputValidator`. Inputs that match injection patterns are blocked (HTTP 400); PII is masked and passed through with a note.
+**`app/security.py`** — `SecurityPipeline` composes `InputSanitizer` (prompt injection detection plus credential extraction/tampering rules; `SAFE_PATTERNS` such as "reset my password" exempt only the credential rules, never the injection rules) + `PIIDetector` (masking emails, phones, SSNs, card numbers) + `OutputValidator`. Inputs that match injection patterns are blocked (HTTP 400); PII is masked and passed through with a note.
 
 **`app/cache.py`** — `ResponseCache` is an in-memory TTL cache (default 5 min). Cache keys are case-normalized message strings.
 
@@ -112,8 +112,8 @@ Request → SecurityPipeline → ResponseCache → ProductionAgent (LangGraph) �
 | `OPENAI_API_KEY` | required | LLM calls |
 | `PRIMARY_MODEL` | `gpt-4o-mini` | Primary LLM |
 | `FALLBACK_MODEL` | `gpt-4o-mini` | Fallback LLM |
-| `LANGCHAIN_API_KEY` | `""` | LangSmith tracing |
-| `LANGCHAIN_TRACING_V2` | `true` | Enable/disable tracing |
+| `LANGSMITH_API_KEY` | `""` | LangSmith tracing |
+| `LANGSMITH_TRACING` | `true` | Enable/disable tracing |
 | `APP_ENV` | `development` | Affects logging behavior |
 | `RATE_LIMIT` | `20/minute` | slowapi rate limit string |
 | `CACHE_TTL_SECONDS` | `300` | Response cache TTL |

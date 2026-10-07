@@ -62,7 +62,7 @@ async def lifespan(app: FastAPI):
             "extra_data": {
                 "environment": settings.app_env,
                 "primary_model": settings.primary_model,
-                "tracing_enabled": settings.langchain_tracing_v2,
+                "tracing_enabled": settings.langsmith_tracing,
             }
         },
     )
@@ -137,7 +137,7 @@ async def chat(request: Request, body: ChatRequest):
     with RequestTimer() as timer:
         security_notes = []
 
-        # ---- Step 1: Security Check ----
+        # ---- Step 1: Security Check Input ----
         is_allowed, cleaned_message, notes = security.check_input(body.message)
         security_notes.extend(notes)
 

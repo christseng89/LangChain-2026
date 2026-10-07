@@ -17,31 +17,66 @@ class InputSanitizer:
     """
 
     INJECTION_PATTERNS = [
-        r"ignore\s+(all\s+)?previous\s+instructions",
-        r"forget\s+(all\s+)?previous",
-        r"new\s+instructions\s*:",
-        r"system\s*prompt",
-        r"---\s*end\s*(of)?\s*prompt",
-        r"pretend\s+you\s+are",
-        r"act\s+as\s+(if\s+)?you",
-        r"bypass\s+(all\s+)?restrictions",
-        r"reveal\s+(your|the)\s+(system|instructions|prompt)",
-        r"you\s+are\s+now\s+(DAN|jailbroken)",
+        r"ignore\s+(all\s+)?previous\s+instructions",  # 指令覆盖:要求模型忽略或丢弃之前的原始指令
+        r"forget\s+(all\s+)?previous",  # 指令覆盖:要求模型忽略或丢弃之前的原始指令
+        r"new\s+instructions\s*:",  # 指令注入:伪造新的指令段落来替换原有指令
+        r"system\s*prompt",  # 探测系统提示词:提及或试图套取系统提示词
+        r"---\s*end\s*(of)?\s*prompt",  # 分隔符伪造:假装提示词已结束,使后面的内容看起来可信
+        r"pretend\s+you\s+are",  # 角色扮演绕过:让模型扮演不受限制的角色
+        r"act\s+as\s+(if\s+)?you",  # 角色扮演绕过:让模型扮演不受限制的角色
+        r"bypass\s+(all\s+)?restrictions",  # 直接要求绕过安全限制
+        r"reveal\s+(your|the)\s+(system|instructions|prompt)",  # 提示词泄露:要求模型输出其内部指令
+        r"you\s+are\s+now\s+(DAN|jailbroken)",  # 越狱:经典的 DAN 类角色切换话术
+    ]
+
+    # 凭据类规则:套取或篡改模型的密码、密钥。只有这组规则可以被 SAFE_PATTERNS 豁免
+    CREDENTIAL_PATTERNS = [
+        r"(reveal|show|tell|give|print|leak|share)\s+(me\s+)?(your|the)\s+(\w+\s+)?(password|api\s*key|secret|credentials?|token)",  # 凭据泄露:套取密码、API Key 等敏感信息
+        r"(change|reset|set|update|modify|overwrite)\s+your\s+(\w+\s+)?(password|api\s*key|secret|credentials?|token)",  # 凭据篡改:试图修改模型的密码或密钥
+    ]
+
+    # 常见的自助操作说法,命中后只豁免凭据类规则(不是在套取他人凭据),注入类规则仍然照常检查
+    SAFE_PATTERNS = [
+        r"\b(reset|change|forgot|recover|update)\s+(my|our)\s+(password|pin)\b",
     ]
 
     def __init__(self):
         self.patterns = [re.compile(p, re.IGNORECASE) for p in self.INJECTION_PATTERNS]
+        self.credential_regexes = [
+            re.compile(p, re.IGNORECASE) for p in self.CREDENTIAL_PATTERNS
+        ]
+        self.allowlist_patterns = [
+            re.compile(p, re.IGNORECASE) for p in self.SAFE_PATTERNS
+        ]
 
     def check(self, text: str) -> tuple[bool, Optional[str]]:
         """
         Check if input is safe.
         Returns: (is_safe, rejection_reason)
         """
+        # 注入类规则始终检查,不受白名单影响
         for pattern in self.patterns:
+            if pattern.search(text):
+                return False, "Blocked: potential prompt injection detected"
+
+        # 凭据类规则:命中白名单(如 "reset my password")时跳过
+        if any(pattern.search(text) for pattern in self.allowlist_patterns):
+            return True, None
+
+        for pattern in self.credential_regexes:
             if pattern.search(text):
                 return False, "Blocked: potential prompt injection detected"
         return True, None
 
+    # 清理分隔符 - 示例
+    # 输入	                        输出
+    # "Hello world"	                "Hello world"(无变化)
+    # " hi "	                    "hi"
+    # "question --- new section"    "question new section"
+    # "=====SYSTEM====="	        "SYSTEM"
+    # "Tell me about {{secret}}"	"Tell me about { {secret} }"
+    # "a ----------- b"	            "a b"
+    # "a -- b"	                    "a -- b"(只有 2 个 -,不处理)
     def clean(self, text: str) -> str:
         """Remove potentially dangerous delimiters from input."""
         text = re.sub(r"[-]{3,}", "", text)
@@ -62,6 +97,7 @@ class PIIDetector:
         "phone": re.compile(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b"),
         "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
         "credit_card": re.compile(r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b"),
+        "ip_address": re.compile(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"),
     }
 
     MASK_MAP = {
@@ -69,6 +105,7 @@ class PIIDetector:
         "phone": "[PHONE REDACTED]",
         "ssn": "[SSN REDACTED]",
         "credit_card": "[CARD REDACTED]",
+        "ip_address": "[IP ADDRESS REDACTED]",
     }
 
     def detect(self, text: str) -> dict[str, list[str]]:
@@ -147,12 +184,12 @@ class SecurityPipeline:
         """
         notes = []
 
-        # Step 1: Check for injection
+        # Step 1: Sanitizer Check for injection
         is_safe, reason = self.sanitizer.check(text)
         if not is_safe:
             return False, "", [reason]
 
-        # Step 2: Clean input
+        # Step 2: Sanitizer Clean input
         cleaned = self.sanitizer.clean(text)
 
         # Step 3: Mask PII before it reaches the LLM

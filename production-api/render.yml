@@ -26,11 +26,11 @@ services:
         value: gpt-4o-mini
       - key: OPENAI_API_KEY
         sync: false  # Must be set manually — NEVER commit secrets
-      - key: LANGCHAIN_API_KEY
+      - key: LANGSMITH_API_KEY
         sync: false  # Must be set manually
-      - key: LANGCHAIN_TRACING_V2
+      - key: LANGSMITH_TRACING
         value: "true"
-      - key: LANGCHAIN_PROJECT
+      - key: LANGSMITH_PROJECT
         value: production-api
     healthCheckPath: /health
     autoDeploy: true

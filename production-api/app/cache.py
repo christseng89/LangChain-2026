@@ -11,9 +11,9 @@ from typing import Optional
 # === Response Cache ===
 class ResponseCache:
     """
-    In-memory response cache with TTL (time-to-live).
+    In-memory response cache with TTL (time-to-live 默认是 300 秒（5 分钟）).
 
-    In production, replace this with Redis for:
+    In production, replace this with Redis (生产环境应该换成 Redis) for:
     - Persistence across restarts
     - Shared cache across multiple instances
     - Built-in TTL management
