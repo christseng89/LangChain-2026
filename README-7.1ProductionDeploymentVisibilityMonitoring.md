@@ -169,9 +169,3 @@ uv run monitoring.py
 ```
 
 ---
-
-# Production Ready API
-
-```bash
-git clone https://github.com/pdichone/lang-production-api.git
-```
