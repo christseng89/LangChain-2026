@@ -12,7 +12,7 @@ from langgraph.graph.message import add_messages
 from langsmith import traceable
 from typing_extensions import Annotated, TypedDict
 
-from app.common import print_llm_info
+from app.common import print_llm_info, save_graph_png
 from app.config import get_settings
 
 
@@ -63,6 +63,7 @@ class ProductionAgent:
 
         self.max_retries = settings.max_retries
         self.graph = self._build_graph()
+        save_graph_png(self.graph, "graph_production_api.png")
 
     def _build_graph(self):
         """Build the LangGraph state machine."""

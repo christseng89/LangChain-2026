@@ -53,6 +53,12 @@ class MetricsResponse(BaseModel):
     cache_hit_rate: str
     total_input_tokens: int
     total_output_tokens: int
+    p50_latency_ms: float = 0.0
+    p95_latency_ms: float = 0.0
+    p99_latency_ms: float = 0.0
+    max_latency_ms: float = 0.0
+    requests_by_model: dict[str, int] = {}
+    errors_by_type: dict[str, int] = {}
 
 
 class ErrorResponse(BaseModel):

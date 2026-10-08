@@ -258,7 +258,7 @@ uv run python -c "
 from app.monitoring import get_logger, MetricsCollector, RequestTimer
 import time, json
 
-logger = get_logger()
+logger = get_logger(name='test_monitoring')
 metrics = MetricsCollector()
 
 print('=== STRUCTURED JSON LOGS ===')

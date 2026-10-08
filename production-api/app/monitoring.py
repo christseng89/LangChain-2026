@@ -5,7 +5,9 @@ Production-grade metrics collection and JSON logging.
 
 import json
 import logging
+import threading
 import time
+from collections import Counter, deque
 from datetime import datetime, timezone
 
 
@@ -41,6 +43,9 @@ def get_logger(name: str = "production-api") -> logging.Logger:
 
 
 # === Metrics Collector ===
+# In production, replace with Prometheus client:
+# from prometheus_client import Counter, Histogram
+# In production, do not use print statements; instead, expose metrics via an HTTP endpoint for Prometheus scraping.
 class MetricsCollector:
     """
     Collects and aggregates application metrics.
@@ -58,6 +63,12 @@ class MetricsCollector:
         self._tokens_output = 0
         self._cache_hits = 0
         self._cache_misses = 0
+        self._latency_max = 0.0
+        # Bounded window of recent latencies, used for percentiles
+        self._recent_latencies = deque(maxlen=1000)
+        self._by_model = Counter()
+        self._by_error_type = Counter()
+        self._lock = threading.Lock()
 
     def record_request(
         self,
@@ -66,24 +77,46 @@ class MetricsCollector:
         output_tokens: int = 0,
         error: bool = False,
         cache_hit: bool = False,
+        model: str | None = None,
+        error_type: str | None = None,
     ):
         """Record a single request's metrics."""
-        self._requests_total += 1
-        self._latency_sum += latency_ms
-        self._latency_count += 1
-        self._tokens_input += input_tokens
-        self._tokens_output += output_tokens
+        with self._lock:
+            self._requests_total += 1
+            self._latency_sum += latency_ms
+            self._latency_count += 1
+            self._latency_max = max(self._latency_max, latency_ms)
+            self._tokens_input += input_tokens
+            self._tokens_output += output_tokens
 
-        if error:
-            self._errors_total += 1
-        if cache_hit:
-            self._cache_hits += 1
-        else:
-            self._cache_misses += 1
+            # Zero-latency entries (blocked / cache hits) would skew percentiles
+            if latency_ms > 0:
+                self._recent_latencies.append(latency_ms)
+            if model:
+                self._by_model[model] += 1
+            if error:
+                self._errors_total += 1
+                self._by_error_type[error_type or "unknown"] += 1
+            if cache_hit:
+                self._cache_hits += 1
+            else:
+                self._cache_misses += 1
+
+    @staticmethod
+    def _percentile(sorted_values: list, pct: float) -> float:
+        if not sorted_values:
+            return 0.0
+        idx = min(len(sorted_values) - 1, int(round(pct / 100 * (len(sorted_values) - 1))))
+        return round(sorted_values[idx], 2)
 
     @property
     def summary(self) -> dict:
         """Compute summary metrics."""
+        with self._lock:
+            latencies = sorted(self._recent_latencies)
+            by_model = dict(self._by_model)
+            by_error_type = dict(self._by_error_type)
+            latency_max = self._latency_max
         avg_latency = (
             self._latency_sum / self._latency_count if self._latency_count > 0 else 0.0
         )
@@ -103,6 +136,12 @@ class MetricsCollector:
             "cache_hit_rate": f"{cache_hit_rate:.2%}",
             "total_input_tokens": self._tokens_input,
             "total_output_tokens": self._tokens_output,
+            "p50_latency_ms": self._percentile(latencies, 50),
+            "p95_latency_ms": self._percentile(latencies, 95),
+            "p99_latency_ms": self._percentile(latencies, 99),
+            "max_latency_ms": round(latency_max, 2),
+            "requests_by_model": by_model,
+            "errors_by_type": by_error_type,
         }
 
 

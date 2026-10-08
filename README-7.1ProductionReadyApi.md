@@ -256,6 +256,7 @@ uv sync
 ```
 
 ```bash
+uv run test_cache_demo.py 
 uv run pytest tests/test_security.py -v
 ```
 
@@ -312,3 +313,42 @@ uv run pytest tests/test_cache.py -v
 ```
 
 ---
+
+## 7. Monitoring — Structured JSON Logs + Metrics - app.monitoring.py
+
+```bash
+uv run python -c "
+from app.monitoring import get_logger, MetricsCollector, RequestTimer
+import time, json
+
+logger = get_logger(name='test_monitoring')
+metrics = MetricsCollector()
+
+print('=== STRUCTURED JSON LOGS ===')
+print()
+logger.info('Application starting')
+logger.info('Processing request', extra={'extra_data': {'user_id': 'user-123', 'thread_id': 'thread-456'}})
+logger.warning('Rate limit approaching', extra={'extra_data': {'current_rate': 18, 'limit': 20}})
+
+print()
+print('=== METRICS COLLECTION ===')
+print()
+
+with RequestTimer() as timer:
+    time.sleep(0.1)
+metrics.record_request(latency_ms=timer.elapsed_ms, input_tokens=50, output_tokens=100, cache_hit=False)
+print(f'Request 1: {timer.elapsed_ms:.1f}ms (LLM call)')
+
+with RequestTimer() as timer:
+    time.sleep(0.05)
+metrics.record_request(latency_ms=timer.elapsed_ms, input_tokens=30, output_tokens=80, cache_hit=True)
+print(f'Request 2: {timer.elapsed_ms:.1f}ms (cache hit)')
+
+metrics.record_request(latency_ms=5.0, error=True)
+print(f'Request 3: error')
+
+print()
+print('=== METRICS SUMMARY ===')
+print(json.dumps(metrics.summary, indent=2))
+"
+```

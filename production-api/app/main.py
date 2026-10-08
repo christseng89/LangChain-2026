@@ -151,7 +151,9 @@ async def chat(request: Request, body: ChatRequest):
                     }
                 },
             )
-            metrics.record_request(latency_ms=0, error=True)
+            metrics.record_request(
+                latency_ms=0, error=True, error_type="security_blocked"
+            )
             raise HTTPException(
                 status_code=400,
                 detail="Your message was blocked by our security filters.",
@@ -190,7 +192,9 @@ async def chat(request: Request, body: ChatRequest):
                     }
                 },
             )
-            metrics.record_request(latency_ms=0, error=True)
+            metrics.record_request(
+                latency_ms=0, error=True, error_type=type(e).__name__
+            )
             raise HTTPException(
                 status_code=500,
                 detail="An error occurred while processing your request.",
@@ -215,6 +219,7 @@ async def chat(request: Request, body: ChatRequest):
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         cache_hit=False,
+        model=model_used,
     )
 
     if security_notes:
