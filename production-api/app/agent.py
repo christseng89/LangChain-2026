@@ -127,7 +127,7 @@ class ProductionAgent:
             if state.get("error") is None:
                 return "done"
             else:
-                return "error"
+                return "process"
 
         # Build the graph
         graph = StateGraph(AgentState)
@@ -145,7 +145,7 @@ class ProductionAgent:
         graph.add_conditional_edges(
             "fallback",
             route_after_fallback,
-            {"done": END, "error": "error"},
+            {"done": END, "process": "process"},  # Retry primary if fallback fails
         )
         graph.add_edge("error", END)
 

@@ -46,7 +46,7 @@ agent: ProductionAgent = None
 logger = get_logger()
 
 
-# === Lifespan (startup/shutdown) ===
+# === Lifespan (FastAPI startup/shutdown) ===
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -61,7 +61,9 @@ async def lifespan(app: FastAPI):
         extra={
             "extra_data": {
                 "environment": settings.app_env,
+                "project": settings.langsmith_project,
                 "primary_model": settings.primary_model,
+                "fallback_model": settings.fallback_model,
                 "tracing_enabled": settings.langsmith_tracing,
             }
         },
@@ -83,6 +85,7 @@ async def lifespan(app: FastAPI):
 
 
 # === Rate Limiter Setup ===
+# 从 request 中取出客户端 IP,作为限流的计数键,所以每个 IP 单独计数。
 limiter = Limiter(key_func=get_remote_address)
 
 # === FastAPI App ===
@@ -117,7 +120,104 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 
 # =============================================
-# ENDPOINTS
+# /chat PIPELINE STEPS
+# =============================================
+def _log_extra(**data) -> dict:
+    """Wrap structured fields in the shape the JSON logger expects."""
+    return {"extra_data": data}
+
+
+# Step 1: Input sanitization and security checks
+def _check_security(message: str, thread_id: str) -> tuple[str, list[str]]:
+    """Step 1: sanitize input. Raises HTTP 400 if blocked."""
+    is_allowed, cleaned_message, notes = security.check_input(message)
+
+    if not is_allowed:
+        logger.warning(
+            "Request blocked by security",
+            extra=_log_extra(reason=notes, thread_id=thread_id),
+        )
+        metrics.record_request(latency_ms=0, error=True, error_type="security_blocked")
+        raise HTTPException(
+            status_code=400,
+            detail="Your message was blocked by our security filters.",
+        )
+
+    return cleaned_message, list(notes)
+
+
+# Step 2: Cache lookup
+def _cached_lookup(message: str, thread_id: str) -> ChatResponse | None:
+    """Step 2: return a ChatResponse on cache hit, else None."""
+    cached_response = cache.get(message)
+    if cached_response is None:
+        return None
+
+    metrics.record_request(latency_ms=0, cache_hit=True)
+    logger.info("Cache hit", extra=_log_extra(thread_id=thread_id))
+    return ChatResponse(
+        response=cached_response,
+        thread_id=thread_id,
+        model_used="cache",
+        cached=True,
+        processing_time_ms=0,
+    )
+
+
+# Step 3: Invoke the LangGraph agent
+def _invoke_agent(message: str, thread_id: str) -> dict:
+    """Step 3: run the LangGraph agent. Raises HTTP 500 on failure."""
+    try:
+        return agent.invoke(message)
+    except Exception as e:
+        logger.error(
+            f"Agent invocation failed: {e}",
+            extra=_log_extra(thread_id=thread_id, error=str(e)),
+        )
+        metrics.record_request(latency_ms=0, error=True, error_type=type(e).__name__)
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while processing your request.",
+        )
+
+
+# Step 6: Record metrics and log completion
+def _record_metrics(
+    *,
+    thread_id: str,
+    cleaned_message: str,
+    response_text: str,
+    model_used: str,
+    latency_ms: float,
+    security_notes: list[str],
+) -> None:
+    """Step 6: record metrics and emit completion logs."""
+    metrics.record_request(
+        latency_ms=latency_ms,
+        input_tokens=int(len(cleaned_message.split()) * 1.3),
+        output_tokens=int(len(response_text.split()) * 1.3),
+        cache_hit=False,
+        model=model_used,
+    )
+
+    if security_notes:
+        logger.info(
+            "Security notes",
+            extra=_log_extra(notes=security_notes, thread_id=thread_id),
+        )
+
+    logger.info(
+        "Request completed",
+        extra=_log_extra(
+            thread_id=thread_id,
+            model_used=model_used,
+            latency_ms=round(latency_ms, 2),
+        ),
+    )
+
+
+# =============================================
+# API ENDPOINTS
 # =============================================
 @app.post("/chat", response_model=ChatResponse)
 @limiter.limit(get_settings().rate_limit)
@@ -132,116 +232,31 @@ async def chat(request: Request, body: ChatRequest):
     3. LangGraph agent invoke (if cache miss)
     4. Output validation
     5. Cache store
-    6. Return response
+    6. Record metrics, log, return response
     """
     with RequestTimer() as timer:
-        security_notes = []
+        cleaned_message, security_notes = _check_security(body.message, body.thread_id)
 
-        # ---- Step 1: Security Check Input ----
-        is_allowed, cleaned_message, notes = security.check_input(body.message)
-        security_notes.extend(notes)
+        if (reply := _cached_lookup(cleaned_message, body.thread_id)) is not None:
+            return reply
 
-        if not is_allowed:
-            logger.warning(
-                "Request blocked by security",
-                extra={
-                    "extra_data": {
-                        "reason": notes,
-                        "thread_id": body.thread_id,
-                    }
-                },
-            )
-            metrics.record_request(
-                latency_ms=0, error=True, error_type="security_blocked"
-            )
-            raise HTTPException(
-                status_code=400,
-                detail="Your message was blocked by our security filters.",
-            )
-
-        # ---- Step 2: Cache Lookup ----
-        cached_response = cache.get(cleaned_message)
-        if cached_response is not None:
-            metrics.record_request(latency_ms=0, cache_hit=True)
-            logger.info(
-                "Cache hit",
-                extra={
-                    "extra_data": {
-                        "thread_id": body.thread_id,
-                    }
-                },
-            )
-            return ChatResponse(
-                response=cached_response,
-                thread_id=body.thread_id,
-                model_used="cache",
-                cached=True,
-                processing_time_ms=0,
-            )
-
-        # ---- Step 3: Invoke LangGraph Agent ----
-        try:
-            result = agent.invoke(cleaned_message)
-        except Exception as e:
-            logger.error(
-                f"Agent invocation failed: {e}",
-                extra={
-                    "extra_data": {
-                        "thread_id": body.thread_id,
-                        "error": str(e),
-                    }
-                },
-            )
-            metrics.record_request(
-                latency_ms=0, error=True, error_type=type(e).__name__
-            )
-            raise HTTPException(
-                status_code=500,
-                detail="An error occurred while processing your request.",
-            )
-
-        response_text = result["response"]
+        result = _invoke_agent(cleaned_message, body.thread_id)
         model_used = result["model_used"]
 
-        # ---- Step 4: Output Validation ----
-        validated_response, output_warnings = security.check_output(response_text)
+        # Step 4: Output validation
+        validated_response, output_warnings = security.check_output(result["response"])
         security_notes.extend(output_warnings)
 
-        # ---- Step 5: Cache Store ----
+        # Step 5: Cache the validated response
         cache.set(cleaned_message, validated_response)
 
-    # ---- Step 6: Log & Record Metrics ----
-    input_tokens = int(len(cleaned_message.split()) * 1.3)
-    output_tokens = int(len(validated_response.split()) * 1.3)
-
-    metrics.record_request(
+    _record_metrics(
+        thread_id=body.thread_id,
+        cleaned_message=cleaned_message,
+        response_text=validated_response,
+        model_used=model_used,
         latency_ms=timer.elapsed_ms,
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        cache_hit=False,
-        model=model_used,
-    )
-
-    if security_notes:
-        logger.info(
-            "Security notes",
-            extra={
-                "extra_data": {
-                    "notes": security_notes,
-                    "thread_id": body.thread_id,
-                }
-            },
-        )
-
-    logger.info(
-        "Request completed",
-        extra={
-            "extra_data": {
-                "thread_id": body.thread_id,
-                "model_used": model_used,
-                "latency_ms": round(timer.elapsed_ms, 2),
-            }
-        },
+        security_notes=security_notes,
     )
 
     return ChatResponse(
