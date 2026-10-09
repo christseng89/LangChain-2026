@@ -15,7 +15,7 @@ services:
       - key: LOG_LEVEL
         value: INFO
       - key: RATE_LIMIT
-        value: "20/minute"
+        value: "15/minute"
       - key: CACHE_TTL_SECONDS
         value: "300"
       - key: MAX_RETRIES
@@ -26,11 +26,17 @@ services:
         value: gpt-4o-mini
       - key: OPENAI_API_KEY
         sync: false  # Must be set manually — NEVER commit secrets
+      - key: ANTHROPIC_API_KEY
+        sync: false  # Must be set manually
       - key: LANGSMITH_API_KEY
         sync: false  # Must be set manually
       - key: LANGSMITH_TRACING
         value: "true"
       - key: LANGSMITH_PROJECT
         value: production-api
+      - key: LANGSMITH_ENDPOINT
+        value: https://api.smith.langchain.com
+      - key: HF_TOKEN
+        sync: false  # Must be set manually
     healthCheckPath: /health
     autoDeploy: true

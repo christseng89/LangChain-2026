@@ -3,7 +3,7 @@ API endpoint tests for app/main.py.
 
 No real LLM calls: ProductionAgent is replaced with a fake, so no API key
 or network is needed. Run with:
-    uv run pytest tests/test_api.py -v
+    uv run pytest tests/test_main.py -v
 """
 
 import os
