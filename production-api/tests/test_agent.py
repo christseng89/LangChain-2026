@@ -15,7 +15,8 @@ os.environ["LANGSMITH_TRACING"] = "false"
 os.environ["LANGCHAIN_TRACING_V2"] = "false"
 
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.runnables import Runnable
 
 from app import agent as agent_module
 from app.agent import ProductionAgent
@@ -26,16 +27,20 @@ ERROR_MESSAGE = (
 )
 
 
-class ScriptedLLM:
-    """Fake chat model. Each call pops the next outcome: a string or an Exception."""
+class ScriptedLLM(Runnable):
+    """Fake chat model. Each call pops the next outcome: a string or an Exception.
+
+    A Runnable, so it composes in the agent's `prompt | llm` chain. `calls` records
+    the full message list the model received (system prompt included).
+    """
 
     def __init__(self, outcomes=None, **init_kwargs):
         self.outcomes = list(outcomes or [])
         self.init_kwargs = init_kwargs
         self.calls: list[list] = []
 
-    def invoke(self, messages):
-        self.calls.append(messages)
+    def invoke(self, input, config=None, **kwargs):
+        self.calls.append(input.to_messages())
         outcome = self.outcomes.pop(0)
         if isinstance(outcome, Exception):
             raise outcome
@@ -57,6 +62,12 @@ def make_agent(monkeypatch):
         return agent
 
     return _make
+
+
+def user_messages(call):
+    """Messages the model received, minus the leading system prompt."""
+    assert isinstance(call[0], SystemMessage)
+    return call[1:]
 
 
 # === Construction ===
@@ -123,17 +134,36 @@ class TestPrimarySuccess:
         agent = make_agent(primary=["ok"])
         agent.invoke("What is Python?")
 
-        sent = agent.primary_llm.calls[0]
+        sent = user_messages(agent.primary_llm.calls[0])
         assert len(sent) == 1
         assert isinstance(sent[0], HumanMessage)
         assert sent[0].content == "What is Python?"
+
+    def test_system_prompt_is_prepended(self, make_agent):
+        agent = make_agent(primary=["ok"])
+        agent.invoke("Hello")
+
+        first = agent.primary_llm.calls[0][0]
+        assert isinstance(first, SystemMessage)
+        assert first.content == agent_module.SYSTEM_PROMPT
+
+    def test_system_prompt_is_not_stored_in_history(self, make_agent):
+        agent = make_agent(primary=["first", "second"])
+        agent.invoke("One", "t1")
+        agent.invoke("Two", "t1")
+
+        stored = agent.graph.get_state(agent._config("t1")).values["messages"]
+        assert not any(isinstance(m, SystemMessage) for m in stored)
+        # system prompt appears exactly once per call, not accumulated
+        second_call = agent.primary_llm.calls[1]
+        assert sum(isinstance(m, SystemMessage) for m in second_call) == 1
 
     def test_same_thread_keeps_conversation_history(self, make_agent):
         agent = make_agent(primary=["first", "second"])
         agent.invoke("My name is Chris", "t1")
         agent.invoke("What is my name?", "t1")
 
-        assert [m.content for m in agent.primary_llm.calls[1]] == [
+        assert [m.content for m in user_messages(agent.primary_llm.calls[1])] == [
             "My name is Chris",
             "first",
             "What is my name?",
@@ -144,7 +174,7 @@ class TestPrimarySuccess:
         agent.invoke("My name is Chris", "t1")
         agent.invoke("What is my name?", "t2")
 
-        assert [m.content for m in agent.primary_llm.calls[1]] == ["What is my name?"]
+        assert [m.content for m in user_messages(agent.primary_llm.calls[1])] == ["What is my name?"]
 
     def test_has_chat_history(self, make_agent):
         agent = make_agent(primary=["ok"])
@@ -173,7 +203,7 @@ class TestFallback:
         agent = make_agent(primary=[RuntimeError("down")], fallback=["ok"])
         agent.invoke("Hello")
 
-        assert [m.content for m in agent.fallback_llm.calls[0]] == ["Hello"]
+        assert [m.content for m in user_messages(agent.fallback_llm.calls[0])] == ["Hello"]
 
     def test_primary_is_retried_when_fallback_also_fails(self, make_agent):
         # primary x1 fails -> fallback fails -> primary retried and succeeds

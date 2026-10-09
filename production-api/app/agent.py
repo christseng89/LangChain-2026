@@ -6,6 +6,7 @@ Retry logic, model fallback, and structured state management.
 from typing import Optional
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
@@ -15,6 +16,9 @@ from typing_extensions import Annotated, TypedDict
 
 from app.common import print_llm_info, save_graph_png
 from app.config import get_settings
+
+
+SYSTEM_PROMPT = "You are a helpful assistant. Answer clearly and concisely."
 
 
 # === Agent State ===
@@ -62,6 +66,12 @@ class ProductionAgent:
         )
         print_llm_info(self.fallback_llm)
 
+        # Shared LCEL prompt: `prompt | llm` runs in each graph node. The system
+        # message is applied per call, so it is never stored in the checkpointer.
+        self.prompt = ChatPromptTemplate.from_messages(
+            [("system", SYSTEM_PROMPT), MessagesPlaceholder("messages")]
+        )
+
         self.max_retries = settings.max_retries
         self.graph = self._build_graph()
         save_graph_png(self.graph, "graph_production_api.png")
@@ -72,7 +82,9 @@ class ProductionAgent:
         def process_message(state: AgentState) -> dict:
             """Try to process the message with the primary model."""
             try:
-                response = self.primary_llm.invoke(state["messages"])
+                response = (self.prompt | self.primary_llm).invoke(
+                    {"messages": state["messages"]}
+                )
                 return {
                     "messages": [response],
                     "error": None,
@@ -88,7 +100,9 @@ class ProductionAgent:
         def try_fallback(state: AgentState) -> dict:
             """Fallback to secondary model."""
             try:
-                response = self.fallback_llm.invoke(state["messages"])
+                response = (self.prompt | self.fallback_llm).invoke(
+                    {"messages": state["messages"]}
+                )
                 return {
                     "messages": [response],
                     "error": None,
