@@ -620,7 +620,7 @@ docker buildx build --platform linux/arm64 -t christseng89/production-api --push
 # k8s
 #kubectl delete secret agent-api-secrets -n production-api
 kubectl delete -f k8s/ 
-kubectl apply -k k8s/ 
+kubectl apply -k k8s/
 kubectl create secret generic agent-api-secrets -n production-api --from-env-file=.env
 
 ```
