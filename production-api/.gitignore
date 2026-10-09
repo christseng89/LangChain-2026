@@ -15,3 +15,5 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+# k8s secrets
+k8s/secret.yaml
