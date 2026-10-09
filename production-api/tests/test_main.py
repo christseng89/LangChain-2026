@@ -26,11 +26,18 @@ class FakeAgent:
         self.calls: list[str] = []
         self.response = "Hello from fake agent"
         self.error: Exception | None = None
-        self.history = False  # pretend threads already have conversation history
+        self.history = False  # force "every thread already has history"
         self.threads: list[str] = []
+        self.remembered: list[tuple[str, str, str]] = []
 
     def has_chat_history(self, thread_id: str) -> bool:
-        return self.history
+        # Like the real agent: a thread has history once it has been used
+        return self.history or thread_id in self.threads or any(
+            t == thread_id for t, _, _ in self.remembered
+        )
+
+    def remember(self, thread_id: str, message: str, response: str) -> None:
+        self.remembered.append((thread_id, message, response))
 
     def invoke(self, message: str, thread_id: str = "default") -> dict:
         self.calls.append(message)
@@ -80,8 +87,8 @@ class TestChat:
         assert chat(client).json()["thread_id"] == "default"
 
     def test_second_identical_request_is_cached(self, client, fake_agent):
-        chat(client)
-        resp = chat(client)
+        chat(client, thread_id="a")
+        resp = chat(client, thread_id="a")
 
         body = resp.json()
         assert body["cached"] is True
@@ -94,24 +101,39 @@ class TestChat:
 
         assert fake_agent.threads == ["t1"]
 
-    def test_cache_is_scoped_per_thread(self, client, fake_agent):
+    def test_cache_hit_records_turn_in_thread_history(self, client, fake_agent):
+        chat(client, thread_id="a")
+        chat(client, thread_id="a")
+
+        assert fake_agent.remembered == [
+            ("a", "What is Python?", "Hello from fake agent")
+        ]
+
+    def test_cache_is_not_shared_across_threads(self, client, fake_agent):
         chat(client, thread_id="a")
         resp = chat(client, thread_id="b")
 
         assert resp.json()["cached"] is False
-        assert len(fake_agent.calls) == 2
+        assert fake_agent.threads == ["a", "b"]
 
-    def test_cache_bypassed_when_thread_has_history(self, client, fake_agent):
+    def test_repeat_in_same_thread_uses_cache(self, client, fake_agent):
+        chat(client, thread_id="a")
+        resp = chat(client, thread_id="a")
+
+        assert resp.json()["cached"] is True
+        assert len(fake_agent.calls) == 1
+
+    def test_cache_is_independent_of_thread_history(self, client, fake_agent):
         fake_agent.history = True
         chat(client)
         resp = chat(client)
 
-        assert resp.json()["cached"] is False
-        assert len(fake_agent.calls) == 2
+        assert resp.json()["cached"] is True
+        assert len(fake_agent.calls) == 1
 
     def test_cache_is_case_insensitive(self, client, fake_agent):
-        chat(client, "What is Python?")
-        resp = chat(client, "what is python?")
+        chat(client, "What is Python?", thread_id="a")
+        resp = chat(client, "what is python?", thread_id="a")
 
         assert resp.json()["cached"] is True
         assert len(fake_agent.calls) == 1
@@ -257,8 +279,8 @@ class TestMetrics:
         assert body["total_errors"] == 0
 
     def test_metrics_track_requests_and_cache_hits(self, client):
-        chat(client)  # miss
-        chat(client)  # hit
+        chat(client, thread_id="a")  # miss
+        chat(client, thread_id="a")  # hit
 
         body = client.get("/metrics").json()
         assert body["total_requests"] == 2
@@ -282,8 +304,8 @@ class TestCacheStats:
         }
 
     def test_stats_after_miss_and_hit(self, client):
-        chat(client)
-        chat(client)
+        chat(client, thread_id="a")
+        chat(client, thread_id="a")
 
         stats = client.get("/cache/stats").json()
         assert stats["hits"] == 1

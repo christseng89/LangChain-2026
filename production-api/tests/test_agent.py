@@ -176,6 +176,19 @@ class TestPrimarySuccess:
 
         assert [m.content for m in user_messages(agent.primary_llm.calls[1])] == ["What is my name?"]
 
+    def test_remember_adds_turn_to_history(self, make_agent):
+        agent = make_agent(primary=["second"])
+        agent.remember("t1", "My name is Chris", "Nice to meet you")
+        assert agent.has_chat_history("t1") is True
+
+        agent.invoke("What is my name?", "t1")
+
+        assert [m.content for m in user_messages(agent.primary_llm.calls[0])] == [
+            "My name is Chris",
+            "Nice to meet you",
+            "What is my name?",
+        ]
+
     def test_has_chat_history(self, make_agent):
         agent = make_agent(primary=["ok"])
         assert agent.has_chat_history("t1") is False

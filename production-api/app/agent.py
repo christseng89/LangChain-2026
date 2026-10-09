@@ -177,6 +177,14 @@ class ProductionAgent:
         state = self.graph.get_state(self._config(thread_id))
         return bool(state.values.get("messages"))
 
+    def remember(self, thread_id: str, message: str, response: str) -> None:
+        """Append a user/assistant turn answered elsewhere (e.g. from the cache)."""
+        self.graph.update_state(
+            self._config(thread_id),
+            {"messages": [HumanMessage(content=message), AIMessage(content=response)]},
+            as_node="process",
+        )
+
     @traceable(name="production_agent_invoke")
     def invoke(self, message: str, thread_id: str = "default") -> dict:
         """

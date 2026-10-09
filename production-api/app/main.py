@@ -148,20 +148,23 @@ def _check_security(message: str, thread_id: str) -> tuple[str, list[str]]:
 
 # Step 2: Cache lookup
 def _cache_key(message: str, thread_id: str) -> str:
-    """Cache entries are scoped per thread so conversations never share answers."""
+    """Scope entries per thread so answers that depend on one conversation's
+    history (e.g. "what is my name?") never leak into another thread."""
     return f"{thread_id}\x00{message}"
 
 
-def _cacheable(thread_id: str) -> bool:
-    """Only first messages are cacheable: later answers depend on chat history."""
-    return not agent.has_chat_history(thread_id)
-
-
 def _cached_lookup(message: str, thread_id: str) -> ChatResponse | None:
-    """Step 2: return a ChatResponse on cache hit, else None."""
+    """Step 2: return a ChatResponse on cache hit, else None.
+
+    The cache is scoped per thread but independent of how much history the
+    thread has.
+    """
     cached_response = cache.get(_cache_key(message, thread_id))
     if cached_response is None:
         return None
+
+    # The agent is skipped, so record the turn or follow-ups would lose context
+    agent.remember(thread_id, message, cached_response)
 
     metrics.record_request(latency_ms=0, cache_hit=True)
     logger.info("Cache hit", extra=_log_extra(thread_id=thread_id))
@@ -247,10 +250,7 @@ async def chat(request: Request, body: ChatRequest):
     with RequestTimer() as timer:
         cleaned_message, security_notes = _check_security(body.message, body.thread_id)
 
-        use_cache = _cacheable(body.thread_id)
-        if use_cache and (
-            reply := _cached_lookup(cleaned_message, body.thread_id)
-        ) is not None:
+        if (reply := _cached_lookup(cleaned_message, body.thread_id)) is not None:
             return reply
 
         result = _invoke_agent(cleaned_message, body.thread_id)
@@ -261,8 +261,7 @@ async def chat(request: Request, body: ChatRequest):
         security_notes.extend(output_warnings)
 
         # Step 5: Cache the validated response
-        if use_cache:
-            cache.set(_cache_key(cleaned_message, body.thread_id), validated_response)
+        cache.set(_cache_key(cleaned_message, body.thread_id), validated_response)
 
     _record_metrics(
         thread_id=body.thread_id,
