@@ -535,8 +535,7 @@ uv run pytest tests/ -v
 ```bash
 docker buildx build --platform linux/arm64 -t christseng89/production-api --push .
 
-docker-compose up --build
-docker-compose up -d
+docker-compose up --build -d
 ```
 
 ## Run Postman for all APIs
@@ -609,5 +608,66 @@ docker-compose up -d
 | LangGraph State Mgmt      | Task Agent           | Complex workflow handling |
 | Multi-Agent Architecture  | Collaborative System | Specialized expertise     |
 | Production Patterns       | All Projects         | Security, testing, cost   |
+
+---
+
+## Production API in k8s
+
+```bash
+docker buildx build --platform linux/arm64 -t christseng89/production-api --push .
+
+kubectl apply -k k8s/
+```
+
+---
+
+# What You've Built
+
+From fundamentals to production-ready systems
+
+| Skill | Project | Business Impact | README |
+|---|---|---|---|
+| LangChain Fundamentals | Smart Q&A Bot | Foundation for all agents | [README-1LangChainFoundation.md](README-1LangChainFoundation.md)<br>[README-2ChainPatterns.md](README-2ChainPatterns.md) |
+| RAG Pipelines | Document Assistant | Context-aware responses | [README-3LoadersSplittersAndVectorStores.md](README-3LoadersSplittersAndVectorStores.md)<br>[README-4.1RagAndAdvancedRag.md](README-4.1RagAndAdvancedRag.md)<br>[README-4.2AdvancedRagRetrival.md](README-4.2AdvancedRagRetrival.md)<br>[README-4.3Memory.md](README-4.3Memory.md)<br>[README-4.4ProjectAiResearchAssistant.md](README-4.4ProjectAiResearchAssistant.md) |
+| LangGraph State Mgmt | Task Agent | Complex workflow handling | [README-5.1LangGraph.md](README-5.1LangGraph.md)<br>[README-5.2LangGraphState.md](README-5.2LangGraphState.md) |
+| Multi-Agent Architecture | Collaborative System | Specialized expertise | [README-6.1MultiAgentSystem.md](README-6.1MultiAgentSystem.md)<br>[README-6.2MultiAgentForIt.md](README-6.2MultiAgentForIt.md) |
+| Production Patterns | All Projects | Security, testing, cost | [README-7.1ProductionReadyApi.md](README-7.1ProductionReadyApi.md)<br>[README-7.1ProductionDeploymentSecurity.md](README-7.1ProductionDeploymentSecurity.md)<br>[README-7.1ProductionDeploymentTesting.md](README-7.1ProductionDeploymentTesting.md)<br>[README-7.1ProductionDeploymentVisibilityMonitoring.md](README-7.1ProductionDeploymentVisibilityMonitoring.md) |
+
+---
+
+# Your Production Toolkit
+
+You can now build agents that scale with your business
+
+- Handle 10x more support tickets (Customer Support Agent)
+- Research in 20 min vs 4 hours (Research Agent)
+- Catch 60% of bugs pre-review (Code Review Agent)
+- Defend against prompt injection attacks
+- Stay within token budgets
+- Deploy to the cloud with a live URL
+
+这六条要点对应的 README 和 Python 文件如下。这个对应关系是我根据文件名和主题判断的,我没有逐个打开这些文件核对。
+
+| 要点 | 相关 README | 相关 Python 文件 |
+|---|---|---|
+| 防御 prompt injection 攻击 | [README-7.1ProductionDeploymentSecurity.md](README-7.1ProductionDeploymentSecurity.md) | [langchain-course/security_patterns.py](langchain-course/security_patterns.py)、[production-api/app/security.py](production-api/app/security.py) |
+| 控制在 token 预算内 | [README-7.1ProductionDeploymentVisibilityMonitoring.md](README-7.1ProductionDeploymentVisibilityMonitoring.md) | [langchain-course/cost_optimization.py](langchain-course/cost_optimization.py)、[langchain-course/semantic_cache.py](langchain-course/semantic_cache.py)、[production-api/app/cache.py](production-api/app/cache.py) |
+| 部署到云端并获得线上 URL | [README-7.1ProductionReadyApi.md](README-7.1ProductionReadyApi.md) 本身 | [production-api/app/main.py](production-api/app/main.py)、[production-api/app/agent.py](production-api/app/agent.py) |
+| Customer Support、Research、Code Review 三个 Agent | [README-6.1MultiAgentSystem.md](README-6.1MultiAgentSystem.md)、[README-6.2MultiAgentForIt.md](README-6.2MultiAgentForIt.md)、[README-5.1LangGraph.md](README-5.1LangGraph.md) | [langchain-course/agent_supervisor.py](langchain-course/agent_supervisor.py)、[langchain-course/agent_multi_agents_system.py](langchain-course/agent_multi_agents_system.py)、[langchain-course/research_assistant.py](langchain-course/research_assistant.py) |
+
+"Research Agent" 在 README-5.1、README-6.1 和 README-7.1ProductionDeploymentSecurity 里都出现过。"Customer Support Agent" 和 "Code Review Agent" 只在 README-7.1ProductionReadyApi 里出现,其他 README 没有这两个词。
+
+如果你要的是某一条要点对应的具体文件,告诉我是哪一条,我可以打开相关文件确认。
+
+---
+
+# What's Next?
+
+Keep learning and building
+
+- LangChain Docs: [python.langchain.com/docs](https://python.langchain.com/docs)
+- LangGraph Docs: [langchain-ai.github.io/langgraph](https://langchain-ai.github.io/langgraph)
+- LangSmith Docs: [docs.smith.langchain.com](https://docs.smith.langchain.com)
+- Build your own agent for YOUR use case
 
 ---
