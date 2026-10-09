@@ -614,9 +614,15 @@ docker-compose up --build -d
 ## Production API in k8s
 
 ```bash
+docker-compose down
 docker buildx build --platform linux/arm64 -t christseng89/production-api --push .
 
-kubectl apply -k k8s/
+# k8s
+#kubectl delete secret agent-api-secrets -n production-api
+kubectl delete -f k8s/ 
+kubectl apply -k k8s/ 
+kubectl create secret generic agent-api-secrets -n production-api --from-env-file=.env
+
 ```
 
 ---
