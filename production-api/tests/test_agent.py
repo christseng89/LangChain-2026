@@ -128,13 +128,30 @@ class TestPrimarySuccess:
         assert isinstance(sent[0], HumanMessage)
         assert sent[0].content == "What is Python?"
 
-    def test_each_invoke_starts_with_fresh_state(self, make_agent):
+    def test_same_thread_keeps_conversation_history(self, make_agent):
         agent = make_agent(primary=["first", "second"])
-        agent.invoke("one")
-        agent.invoke("two")
+        agent.invoke("My name is Chris", "t1")
+        agent.invoke("What is my name?", "t1")
 
-        # no conversation carry-over between invocations
-        assert [m.content for m in agent.primary_llm.calls[1]] == ["two"]
+        assert [m.content for m in agent.primary_llm.calls[1]] == [
+            "My name is Chris",
+            "first",
+            "What is my name?",
+        ]
+
+    def test_threads_are_isolated(self, make_agent):
+        agent = make_agent(primary=["first", "second"])
+        agent.invoke("My name is Chris", "t1")
+        agent.invoke("What is my name?", "t2")
+
+        assert [m.content for m in agent.primary_llm.calls[1]] == ["What is my name?"]
+
+    def test_has_chat_history(self, make_agent):
+        agent = make_agent(primary=["ok"])
+        assert agent.has_chat_history("t1") is False
+        agent.invoke("Hello", "t1")
+        assert agent.has_chat_history("t1") is True
+        assert agent.has_chat_history("t2") is False
 
 
 # === Primary fails, fallback takes over ===

@@ -7,6 +7,7 @@ from typing import Optional
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langsmith import traceable
@@ -149,12 +150,24 @@ class ProductionAgent:
         )
         graph.add_edge("error", END)
 
-        return graph.compile()
+        # In-memory checkpointer: conversation history is kept per thread_id.
+        # Swap for a persistent saver (Postgres/Redis) to survive restarts.
+        return graph.compile(checkpointer=MemorySaver())
+
+    @staticmethod
+    def _config(thread_id: str) -> dict:
+        return {"configurable": {"thread_id": thread_id}}
+
+    def has_chat_history(self, thread_id: str) -> bool:
+        """True if this thread already has stored conversation messages."""
+        state = self.graph.get_state(self._config(thread_id))
+        return bool(state.values.get("messages"))
 
     @traceable(name="production_agent_invoke")
-    def invoke(self, message: str) -> dict:
+    def invoke(self, message: str, thread_id: str = "default") -> dict:
         """
-        Invoke the agent with a user message.
+        Invoke the agent with a user message in the given conversation thread.
+        Earlier messages of the same thread are included as context.
         Returns: {"response": str, "model_used": str, "error": str | None}
         """
         result = self.graph.invoke(
@@ -163,7 +176,8 @@ class ProductionAgent:
                 "error": None,
                 "retry_count": 0,
                 "model_used": "",
-            }
+            },
+            self._config(thread_id),
         )
 
         return {

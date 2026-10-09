@@ -26,9 +26,15 @@ class FakeAgent:
         self.calls: list[str] = []
         self.response = "Hello from fake agent"
         self.error: Exception | None = None
+        self.history = False  # pretend threads already have conversation history
+        self.threads: list[str] = []
 
-    def invoke(self, message: str) -> dict:
+    def has_chat_history(self, thread_id: str) -> bool:
+        return self.history
+
+    def invoke(self, message: str, thread_id: str = "default") -> dict:
         self.calls.append(message)
+        self.threads.append(thread_id)
         if self.error:
             raise self.error
         return {"response": self.response, "model_used": "fake-model"}
@@ -82,6 +88,26 @@ class TestChat:
         assert body["model_used"] == "cache"
         assert body["processing_time_ms"] == 0
         assert len(fake_agent.calls) == 1  # agent not called the second time
+
+    def test_thread_id_is_passed_to_agent(self, client, fake_agent):
+        chat(client, thread_id="t1")
+
+        assert fake_agent.threads == ["t1"]
+
+    def test_cache_is_scoped_per_thread(self, client, fake_agent):
+        chat(client, thread_id="a")
+        resp = chat(client, thread_id="b")
+
+        assert resp.json()["cached"] is False
+        assert len(fake_agent.calls) == 2
+
+    def test_cache_bypassed_when_thread_has_history(self, client, fake_agent):
+        fake_agent.history = True
+        chat(client)
+        resp = chat(client)
+
+        assert resp.json()["cached"] is False
+        assert len(fake_agent.calls) == 2
 
     def test_cache_is_case_insensitive(self, client, fake_agent):
         chat(client, "What is Python?")

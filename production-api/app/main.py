@@ -147,9 +147,19 @@ def _check_security(message: str, thread_id: str) -> tuple[str, list[str]]:
 
 
 # Step 2: Cache lookup
+def _cache_key(message: str, thread_id: str) -> str:
+    """Cache entries are scoped per thread so conversations never share answers."""
+    return f"{thread_id}\x00{message}"
+
+
+def _cacheable(thread_id: str) -> bool:
+    """Only first messages are cacheable: later answers depend on chat history."""
+    return not agent.has_chat_history(thread_id)
+
+
 def _cached_lookup(message: str, thread_id: str) -> ChatResponse | None:
     """Step 2: return a ChatResponse on cache hit, else None."""
-    cached_response = cache.get(message)
+    cached_response = cache.get(_cache_key(message, thread_id))
     if cached_response is None:
         return None
 
@@ -168,7 +178,7 @@ def _cached_lookup(message: str, thread_id: str) -> ChatResponse | None:
 def _invoke_agent(message: str, thread_id: str) -> dict:
     """Step 3: run the LangGraph agent. Raises HTTP 500 on failure."""
     try:
-        return agent.invoke(message)
+        return agent.invoke(message, thread_id)
     except Exception as e:
         logger.error(
             f"Agent invocation failed: {e}",
@@ -237,7 +247,10 @@ async def chat(request: Request, body: ChatRequest):
     with RequestTimer() as timer:
         cleaned_message, security_notes = _check_security(body.message, body.thread_id)
 
-        if (reply := _cached_lookup(cleaned_message, body.thread_id)) is not None:
+        use_cache = _cacheable(body.thread_id)
+        if use_cache and (
+            reply := _cached_lookup(cleaned_message, body.thread_id)
+        ) is not None:
             return reply
 
         result = _invoke_agent(cleaned_message, body.thread_id)
@@ -248,7 +261,8 @@ async def chat(request: Request, body: ChatRequest):
         security_notes.extend(output_warnings)
 
         # Step 5: Cache the validated response
-        cache.set(cleaned_message, validated_response)
+        if use_cache:
+            cache.set(_cache_key(cleaned_message, body.thread_id), validated_response)
 
     _record_metrics(
         thread_id=body.thread_id,

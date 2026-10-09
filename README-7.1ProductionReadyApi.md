@@ -597,3 +597,17 @@ docker-compose up -d
 - https://langchain-2026.onrender.com/health
 
 ---
+
+# What You've Built
+
+*From fundamentals to production-ready systems*
+
+| Skill                     | Project              | Business Impact           |
+|---------------------------|----------------------|---------------------------|
+| LangChain Fundamentals    | Smart Q&A Bot        | Foundation for all agents |
+| RAG Pipelines             | Document Assistant   | Context-aware responses   |
+| LangGraph State Mgmt      | Task Agent           | Complex workflow handling |
+| Multi-Agent Architecture  | Collaborative System | Specialized expertise     |
+| Production Patterns       | All Projects         | Security, testing, cost   |
+
+---
